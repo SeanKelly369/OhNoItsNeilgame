@@ -17,8 +17,6 @@ struct ContentView: View {
                     .ignoresSafeArea()
 
                 TimelineView(.animation) { context in
-                    // Capture a value that changes with the simulation. Capturing only
-                    // the controller lets SwiftUI reuse a stale canvas indefinitely.
                     let frame = controller.frame
                     Canvas { ctx, size in
                         controller.draw(context: &ctx, size: size, frame: frame)
@@ -203,30 +201,26 @@ final class GameController: ObservableObject {
         ctx.translateBy(x: 0, y: 40)
         ctx.fill(Path(CGRect(x: 0, y: 0, width: 480, height: 230)), with: .color(Color(red: 23/255, green: 43/255, blue: 70/255)))
 
-        // Stars background
-        for i in 0..<36 {
-            let sx = CGFloat(((i * 73 - Int(cameraX * 0.12)) % 500 + 500) % 500)
-            ctx.fill(Path(CGRect(x: sx, y: CGFloat((i * 31) % 96), width: 1, height: 1)), with: .color(Color(red: 110/255, green: 145/255, blue: 163/255)))
-        }
+        // Render 90s Amiga room background artwork across the world
+        let r62 = ctx.resolve(Image("room_062"))
+        let r15 = ctx.resolve(Image("room_015"))
+        let r00 = ctx.resolve(Image("room_000"))
+
+        let bgContext = ctx
+        ctx.translateBy(x: -cameraX, y: 0)
+        ctx.draw(r62, in: CGRect(x: 0, y: 0, width: 480, height: 230))
+        ctx.draw(r15, in: CGRect(x: 480, y: 0, width: 480, height: 230))
+        ctx.draw(r00, in: CGRect(x: 960, y: 0, width: 480, height: 230))
+        ctx = bgContext
 
         // World Objects & Platforms
         ctx.translateBy(x: -cameraX, y: 0)
-
-        // Water
-        ctx.fill(Path(CGRect(x: 650, y: 220, width: 140, height: 30)), with: .color(Color(red: 61/255, green: 138/255, blue: 160/255)))
 
         // Bridge
         if frame.bridge {
             for i in 0..<14 {
                 ctx.fill(Path(CGRect(x: 650 + i * 10, y: 216, width: 9, height: 8)), with: .color(Color(red: 199/255, green: 152/255, blue: 98/255)))
             }
-        }
-
-        // Platforms
-        for plat in game.platforms {
-            let h: CGFloat = plat.y == 222 ? 35 : 12
-            ctx.fill(Path(CGRect(x: CGFloat(plat.x), y: CGFloat(plat.y), width: CGFloat(plat.width), height: h)), with: .color(Color(red: 102/255, green: 86/255, blue: 78/255)))
-            ctx.fill(Path(CGRect(x: CGFloat(plat.x), y: CGFloat(plat.y), width: CGFloat(plat.width), height: 4)), with: .color(Color(red: 136/255, green: 190/255, blue: 119/255)))
         }
 
         // Neil Character Drawing
@@ -377,11 +371,18 @@ private struct AmigaRoomReferenceView: View {
     private var roomLabel: String { AmigaRooms.shared.room(id: roomID).label }
 
     private func loadArtwork() {
-        guard let url = Bundle.main.url(
-            forResource: String(format: "room_%02d", roomID),
+        let name3 = String(format: "room_%03d", roomID)
+        let name2 = String(format: "room_%02d", roomID)
+        if let img = UIImage(named: name3) ?? UIImage(named: name2) {
+            artwork = img
+        } else if let url = Bundle.main.url(
+            forResource: name2,
             withExtension: "png", subdirectory: "sprites/amiga"
-        ) else { artwork = nil; return }
-        artwork = UIImage(contentsOfFile: url.path)
+        ) {
+            artwork = UIImage(contentsOfFile: url.path)
+        } else {
+            artwork = nil
+        }
     }
 
     var body: some View {
