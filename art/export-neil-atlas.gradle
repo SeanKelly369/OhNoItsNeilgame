@@ -1,0 +1,116 @@
+import groovy.json.JsonOutput
+import java.awt.image.BufferedImage
+import javax.imageio.ImageIO
+
+// Run once to import the imagegen output, or rerun using the retained source PNG.
+// ./gradlew --no-configuration-cache -I art/export-neil-atlas.gradle exportNeilAtlas -PneilPoses=/absolute/path/to/poses.png
+gradle.projectsEvaluated {
+    rootProject.tasks.register("exportNeilAtlas") {
+        doLast {
+            def root = rootProject.projectDir
+            def source = new File(root, "art/source/neil_additional_poses.png")
+            def inputPath = rootProject.findProperty("neilPoses")
+            if (inputPath != null) {
+                source.parentFile.mkdirs()
+                java.nio.file.Files.copy(new File(inputPath.toString()).toPath(), source.toPath(),
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            }
+            def walkSource = new File(root, "art/source/neil_walk_cycle.png")
+            def walkPath = rootProject.findProperty("neilWalk")
+            if (walkPath != null) {
+                java.nio.file.Files.copy(new File(walkPath.toString()).toPath(), walkSource.toPath(),
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            }
+            def walk = walkSource.exists() ? ImageIO.read(walkSource) : null
+            if (walkSource.exists()) {
+                assert walk != null && walk.colorModel.hasAlpha() : "Walk sheet needs RGBA transparency"
+                assert walk.width % 3 == 0 && walk.height % 2 == 0 : "Walk sheet must use a 3 by 2 grid"
+            }
+            def legacyFile = new File(root, "app/src/main/assets/neil_sprite_sheet.txt")
+            def legacy = ImageIO.read(new ByteArrayInputStream(Base64.mimeDecoder.decode(legacyFile.text.trim())))
+            def poses = ImageIO.read(source)
+            assert legacy != null && poses != null : "Both sprite inputs must decode as PNG"
+            assert legacy.colorModel.hasAlpha() && poses.colorModel.hasAlpha() : "Sprites need transparency"
+            def inputs = [legacy, poses]
+            int cellWidth = inputs.collect { (int)(it.width / 4) }.max()
+            int cellHeight = inputs.collect { (int)(it.height / 4) }.max()
+            def atlas = new BufferedImage(cellWidth * 4, cellHeight * 8, BufferedImage.TYPE_INT_ARGB)
+            def names = (0..3).collect { "legacy_idle_${it}" } +
+                (0..3).collect { "legacy_walk_${it}" } +
+                ["jump", "fall", "land", "hurt"] +
+                (0..3).collect { "legacy_use_${it}" } +
+                ["idle_right"] + (1..6).collect { "walk_right_${it}" } +
+                ["idle_front", "idle_back", "shrug", "point_right", "idle_left",
+                 "climb_left", "climb_right", "climb_alternate", "climb_rest"]
+            def frames = []
+            def graphics = atlas.createGraphics()
+            try {
+                graphics.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION,
+                    java.awt.RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR)
+                inputs.eachWithIndex { input, sheet ->
+                    int width = (int)(input.width / 4)
+                    int height = (int)(input.height / 4)
+                    (0..<16).each { local ->
+                        int index = sheet * 16 + local
+                        int sx = (local % 4) * width
+                        int sy = (int)(local / 4) * height
+                        int x = (index % 4) * cellWidth
+                        int y = (int)(index / 4) * cellHeight
+                        // Lossless packing: no redraw, filtering, or resizing of either source.
+                        int dx = x + (int)((cellWidth - width) / 2)
+                        int dy = y + cellHeight - height
+                        if (walk != null && index in 17..22) {
+                            int phase = index - 17
+                            int walkWidth = (int)(walk.width / 3)
+                            int walkHeight = (int)(walk.height / 2)
+                            int wx = (phase % 3) * walkWidth
+                            int wy = (int)(phase / 3) * walkHeight
+                            graphics.drawImage(walk, x, y, x + cellWidth, y + cellHeight,
+                                wx, wy, wx + walkWidth, wy + walkHeight, null)
+                        } else {
+                            graphics.drawImage(input, dx, dy, dx + width, dy + height,
+                                sx, sy, sx + width, sy + height, null)
+                        }
+                        int baseline = 0
+                        int visible = 0
+                        for (int py = 0; py < cellHeight; py++) {
+                            for (int px = 0; px < cellWidth; px++) {
+                                if ((atlas.getRGB(x + px, y + py) >>> 24) > 128) {
+                                    baseline = py + 1
+                                    visible++
+                                }
+                            }
+                        }
+                        assert baseline > 0 && visible < cellWidth * cellHeight * 0.8 :
+                            "Frame ${index} must contain a sprite surrounded by transparency"
+                        frames.add([name: names[index], x: x, y: y,
+                            width: cellWidth, height: cellHeight, baseline: baseline])
+                    }
+                }
+            } finally {
+                graphics.dispose()
+            }
+            def destination = new File(root, "art/sprites")
+            destination.mkdirs()
+            def atlasFile = new File(destination, "neil_sprite_atlas.png")
+            if (walkPath != null && inputPath == null && atlasFile.exists()) {
+                def previous = ImageIO.read(atlasFile)
+                assert previous.width == atlas.width && previous.height == atlas.height
+                for (int py = 0; py < atlas.height; py++) {
+                    for (int px = 0; px < atlas.width; px++) {
+                        int frame = (int)(py / cellHeight) * 4 + (int)(px / cellWidth)
+                        if (!(frame in 17..22)) {
+                            assert previous.getRGB(px, py) == atlas.getRGB(px, py) :
+                                "Non-walking frame ${frame} changed"
+                        }
+                    }
+                }
+                println("Verified all 26 non-walking frames are pixel-identical.")
+            }
+            assert ImageIO.write(atlas, "png", atlasFile)
+            new File(destination, "neil_sprite_atlas.json").text = JsonOutput.prettyPrint(JsonOutput.toJson(
+                [image: "neil_sprite_atlas.png", columns: 4, rows: 8, frames: frames])) + "\n"
+            println("Exported ${atlas.width} x ${atlas.height} RGBA PNG with ${frames.size()} frames.")
+        }
+    }
+}

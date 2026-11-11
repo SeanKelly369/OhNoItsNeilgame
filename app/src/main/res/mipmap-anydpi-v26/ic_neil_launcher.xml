@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/neil_brand_background" />
+    <foreground>
+        <inset android:inset="22%">
+            <bitmap android:src="@drawable/neil_app_icon" android:gravity="fill" android:filter="true" />
+        </inset>
+    </foreground>
+</adaptive-icon>

@@ -1,0 +1,263 @@
+{
+    "image": "neil_sprite_atlas.png",
+    "columns": 4,
+    "rows": 8,
+    "frames": [
+        {
+            "name": "legacy_idle_0",
+            "x": 0,
+            "y": 0,
+            "width": 313,
+            "height": 313,
+            "baseline": 299
+        },
+        {
+            "name": "legacy_idle_1",
+            "x": 313,
+            "y": 0,
+            "width": 313,
+            "height": 313,
+            "baseline": 299
+        },
+        {
+            "name": "legacy_idle_2",
+            "x": 626,
+            "y": 0,
+            "width": 313,
+            "height": 313,
+            "baseline": 299
+        },
+        {
+            "name": "legacy_idle_3",
+            "x": 939,
+            "y": 0,
+            "width": 313,
+            "height": 313,
+            "baseline": 299
+        },
+        {
+            "name": "legacy_walk_0",
+            "x": 0,
+            "y": 313,
+            "width": 313,
+            "height": 313,
+            "baseline": 299
+        },
+        {
+            "name": "legacy_walk_1",
+            "x": 313,
+            "y": 313,
+            "width": 313,
+            "height": 313,
+            "baseline": 299
+        },
+        {
+            "name": "legacy_walk_2",
+            "x": 626,
+            "y": 313,
+            "width": 313,
+            "height": 313,
+            "baseline": 299
+        },
+        {
+            "name": "legacy_walk_3",
+            "x": 939,
+            "y": 313,
+            "width": 313,
+            "height": 313,
+            "baseline": 299
+        },
+        {
+            "name": "jump",
+            "x": 0,
+            "y": 626,
+            "width": 313,
+            "height": 313,
+            "baseline": 258
+        },
+        {
+            "name": "fall",
+            "x": 313,
+            "y": 626,
+            "width": 313,
+            "height": 313,
+            "baseline": 295
+        },
+        {
+            "name": "land",
+            "x": 626,
+            "y": 626,
+            "width": 313,
+            "height": 313,
+            "baseline": 303
+        },
+        {
+            "name": "hurt",
+            "x": 939,
+            "y": 626,
+            "width": 313,
+            "height": 313,
+            "baseline": 301
+        },
+        {
+            "name": "legacy_use_0",
+            "x": 0,
+            "y": 939,
+            "width": 313,
+            "height": 313,
+            "baseline": 300
+        },
+        {
+            "name": "legacy_use_1",
+            "x": 313,
+            "y": 939,
+            "width": 313,
+            "height": 313,
+            "baseline": 300
+        },
+        {
+            "name": "legacy_use_2",
+            "x": 626,
+            "y": 939,
+            "width": 313,
+            "height": 313,
+            "baseline": 300
+        },
+        {
+            "name": "legacy_use_3",
+            "x": 939,
+            "y": 939,
+            "width": 313,
+            "height": 313,
+            "baseline": 300
+        },
+        {
+            "name": "idle_right",
+            "x": 0,
+            "y": 1252,
+            "width": 313,
+            "height": 313,
+            "baseline": 293
+        },
+        {
+            "name": "walk_right_1",
+            "x": 313,
+            "y": 1252,
+            "width": 313,
+            "height": 313,
+            "baseline": 284
+        },
+        {
+            "name": "walk_right_2",
+            "x": 626,
+            "y": 1252,
+            "width": 313,
+            "height": 313,
+            "baseline": 284
+        },
+        {
+            "name": "walk_right_3",
+            "x": 939,
+            "y": 1252,
+            "width": 313,
+            "height": 313,
+            "baseline": 284
+        },
+        {
+            "name": "walk_right_4",
+            "x": 0,
+            "y": 1565,
+            "width": 313,
+            "height": 313,
+            "baseline": 285
+        },
+        {
+            "name": "walk_right_5",
+            "x": 313,
+            "y": 1565,
+            "width": 313,
+            "height": 313,
+            "baseline": 285
+        },
+        {
+            "name": "walk_right_6",
+            "x": 626,
+            "y": 1565,
+            "width": 313,
+            "height": 313,
+            "baseline": 285
+        },
+        {
+            "name": "idle_front",
+            "x": 939,
+            "y": 1565,
+            "width": 313,
+            "height": 313,
+            "baseline": 292
+        },
+        {
+            "name": "idle_back",
+            "x": 0,
+            "y": 1878,
+            "width": 313,
+            "height": 313,
+            "baseline": 291
+        },
+        {
+            "name": "shrug",
+            "x": 313,
+            "y": 1878,
+            "width": 313,
+            "height": 313,
+            "baseline": 291
+        },
+        {
+            "name": "point_right",
+            "x": 626,
+            "y": 1878,
+            "width": 313,
+            "height": 313,
+            "baseline": 291
+        },
+        {
+            "name": "idle_left",
+            "x": 939,
+            "y": 1878,
+            "width": 313,
+            "height": 313,
+            "baseline": 291
+        },
+        {
+            "name": "climb_left",
+            "x": 0,
+            "y": 2191,
+            "width": 313,
+            "height": 313,
+            "baseline": 298
+        },
+        {
+            "name": "climb_right",
+            "x": 313,
+            "y": 2191,
+            "width": 313,
+            "height": 313,
+            "baseline": 298
+        },
+        {
+            "name": "climb_alternate",
+            "x": 626,
+            "y": 2191,
+            "width": 313,
+            "height": 313,
+            "baseline": 298
+        },
+        {
+            "name": "climb_rest",
+            "x": 939,
+            "y": 2191,
+            "width": 313,
+            "height": 313,
+            "baseline": 297
+        }
+    ]
+}

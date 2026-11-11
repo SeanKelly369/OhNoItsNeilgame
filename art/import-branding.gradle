@@ -1,0 +1,51 @@
+import java.awt.Color
+import java.awt.RenderingHints
+import java.awt.image.BufferedImage
+import javax.imageio.ImageIO
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+
+// Import generated PNGs once; exports remain checked-in resources, not a build dependency.
+// ./gradlew --no-configuration-cache -I art/import-branding.gradle importNeilBranding -PlogoSource=... -PiconSource=...
+gradle.projectsEvaluated {
+    rootProject.tasks.register("importNeilBranding") {
+        doLast {
+            def root = rootProject.projectDir
+            def copyPng = { String sourcePath, String targetPath ->
+                def source = new File(sourcePath)
+                assert ImageIO.read(source) != null : "Invalid branding image: ${source}"
+                def target = new File(root, targetPath)
+                target.parentFile.mkdirs()
+                Files.copy(source.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING)
+            }
+            def logoSource = rootProject.findProperty("logoSource")
+            def iconSource = rootProject.findProperty("iconSource")
+            assert logoSource && iconSource : "Supply -PlogoSource and -PiconSource"
+            copyPng(logoSource.toString(), "art/branding/neil_logo.png")
+            copyPng(iconSource.toString(), "art/branding/neil_icon_source.png")
+            copyPng(logoSource.toString(), "app/src/main/res/drawable-nodpi/neil_logo.png")
+            copyPng(logoSource.toString(), "iosApp/iosApp/Assets.xcassets/NeilLogo.imageset/neil_logo.png")
+
+            // Platform export only: resize the square artwork and remove alpha for Apple's icon.
+            def input = ImageIO.read(new File(iconSource.toString()))
+            assert input.width == input.height : "App icon must be square"
+            def icon = new BufferedImage(1024, 1024, BufferedImage.TYPE_INT_RGB)
+            def g = icon.createGraphics()
+            try {
+                g.color = new Color(14, 24, 40)
+                g.fillRect(0, 0, 1024, 1024)
+                g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC)
+                g.drawImage(input, 0, 0, 1024, 1024, null)
+            } finally { g.dispose() }
+            [
+                "app/src/main/res/drawable-nodpi/neil_app_icon.png",
+                "iosApp/iosApp/Assets.xcassets/AppIcon.appiconset/neil_app_icon.png"
+            ].each { path ->
+                def output = new File(root, path)
+                output.parentFile.mkdirs()
+                assert ImageIO.write(icon, "png", output)
+            }
+            println("Imported wide logo and exported opaque 1024px launcher artwork for both platforms.")
+        }
+    }
+}

@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>Neil walk cycle</title>
+<style>
+body { background:#243442; color:#f7efdf; font:16px system-ui; margin:40px; }
+.stage { height:330px; position:relative; border-bottom:2px solid #71858c; width:626px; max-width:100%; }
+.sprite { width:313px; height:313px; position:absolute; bottom:0; background-image:url('sprites/neil_sprite_atlas.png'); image-rendering:pixelated; animation:walk .6s steps(1,end) infinite; }
+.left { left:313px; transform:scaleX(-1); }
+.paused .sprite { animation-play-state:paused; }
+@keyframes walk {
+0% { background-position:-313px -1252px; bottom:-29px; }
+16.6667% { background-position:-626px -1252px; bottom:-29px; }
+33.3333% { background-position:-939px -1252px; bottom:-29px; }
+50% { background-position:0 -1565px; bottom:-28px; }
+66.6667% { background-position:-313px -1565px; bottom:-28px; }
+83.3333% { background-position:-626px -1565px; bottom:-28px; }
+}
+button,input { margin:16px 12px 0 0; }
+</style>
+<h1>Neil’s walk cycle</h1><p>Six frames at the game’s 10 fps, with feet aligned as in both renderers.</p>
+<div class="stage" id="stage"><div class="sprite"></div><div class="sprite left"></div></div>
+<button id="pause">Pause</button><label>Speed <input id="speed" type="range" min="2" max="16" value="10"> <span id="fps">10 fps</span></label>
+<script>
+const stage=document.getElementById('stage'), pause=document.getElementById('pause');
+pause.onclick=()=>{const paused=stage.classList.toggle('paused');pause.textContent=paused?'Play':'Pause';};
+document.getElementById('speed').oninput=e=>{document.querySelectorAll('.sprite').forEach(s=>s.style.animationDuration=(6/e.target.value)+'s');document.getElementById('fps').textContent=e.target.value+' fps';};
+</script></html>

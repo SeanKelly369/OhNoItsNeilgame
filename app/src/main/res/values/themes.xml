@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.OhNoItsNeilGame.Base" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@drawable/neil_launch_background</item>
+        <item name="android:colorAccent">#FFC75B</item>
+    </style>
+    <style name="Theme.OhNoItsNeilGame" parent="Theme.OhNoItsNeilGame.Base" />
+</resources>

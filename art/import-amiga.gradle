@@ -1,0 +1,61 @@
+import groovy.json.JsonOutput
+import javax.imageio.ImageIO
+import java.awt.image.BufferedImage
+
+// Explicit geometry prevents silently treating a scaled preview as the original tile grid.
+// Outputs share the existing Android assets / iOS sprites bundle directory.
+gradle.projectsEvaluated {
+    rootProject.tasks.register("importAmigaArtwork") {
+        doLast {
+            def required = { String name ->
+                def value = rootProject.findProperty(name)
+                if (value == null) throw new GradleException("Missing -P${name}; see art/AMIGA_IMPORT.md")
+                value.toString()
+            }
+            def roomsFile = new File(required("amigaRooms"))
+            def tilesFile = new File(required("amigaTiles"))
+            int labelHeight = required("amigaLabelHeight").toInteger()
+            int tileWidth = required("amigaTileWidth").toInteger()
+            int tileHeight = required("amigaTileHeight").toInteger()
+            def rooms = ImageIO.read(roomsFile)
+            def tiles = ImageIO.read(tilesFile)
+            if (rooms == null || tiles == null) throw new GradleException("Both inputs must be decodable images")
+            if (rooms.width < 5 || rooms.height < 20 || labelHeight < 0 ||
+                labelHeight >= (int)(rooms.height / 20)) {
+                throw new GradleException("Invalid room sheet or label height")
+            }
+            if (tileWidth <= 0 || tileHeight <= 0 ||
+                tiles.width % tileWidth != 0 || tiles.height % tileHeight != 0) {
+                throw new GradleException("Tile dimensions must divide the tileset exactly")
+            }
+            def destination = new File(rootProject.projectDir, "art/sprites/amiga")
+            if (roomsFile.canonicalPath.startsWith(destination.canonicalPath + File.separator) ||
+                tilesFile.canonicalPath.startsWith(destination.canonicalPath + File.separator)) {
+                throw new GradleException("Inputs must be outside the generated amiga directory")
+            }
+            // Validate everything before creating outputs. Source pixels are never resampled.
+            destination.mkdirs()
+            def frames = (0..<100).collect { id ->
+                int column = id % 5
+                int row = (int)(id / 5)
+                int left = (int)(column * rooms.width / 5)
+                int top = (int)(row * rooms.height / 20)
+                int right = (int)((column + 1) * rooms.width / 5)
+                int bottom = (int)((row + 1) * rooms.height / 20) - labelHeight
+                def name = String.format("room_%02d.png", id)
+                if (!ImageIO.write(rooms.getSubimage(left, top, right - left, bottom - top),
+                    "png", new File(destination, name))) throw new GradleException("PNG writer unavailable")
+                [id: id, image: name, x: left, y: top, width: right - left, height: bottom - top]
+            }
+            ImageIO.write(tiles, "png", new File(destination, "tiles.png"))
+            new File(destination, "manifest.json").text = JsonOutput.prettyPrint(JsonOutput.toJson([
+                version: 1, columns: 5, rows: 20, labelHeight: labelHeight,
+                sourceWidth: rooms.width, sourceHeight: rooms.height,
+                tileWidth: tileWidth, tileHeight: tileHeight,
+                tileColumns: (int)(tiles.width / tileWidth), tileRows: (int)(tiles.height / tileHeight),
+                rooms: frames
+            ])) + "\n"
+            println("Imported 100 room crops and the original tileset without resampling.")
+        }
+    }
+}
