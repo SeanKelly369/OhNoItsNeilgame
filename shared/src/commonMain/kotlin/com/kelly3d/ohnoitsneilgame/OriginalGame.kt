@@ -52,7 +52,7 @@ class OriginalGame(val rooms: List<Room>, val objects: List<Item>) {
         return current.collision[ty * 20 + tx]
     }
     fun onLadder() = attribute(x + 8, y + 16) == 10 || attribute(x + 8, y + 30) == 10
-    fun jump() { if (grounded || onLadder()) { vy = -190f; grounded = false } }
+    fun jump() { if (grounded || onLadder()) { vy = -220f; grounded = false } }
     fun enter(id: Int, px: Float = 152f, py: Float = 64f) {
         if (id !in rooms.indices || !rooms[id].occupied) return
         room = id; x = px.coerceIn(0f,304f); y = py.coerceIn(0f,160f)
