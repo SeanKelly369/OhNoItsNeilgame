@@ -9,11 +9,13 @@ class ForestReconstructionTest {
         assertEquals(120, map.width)
         assertEquals(24, map.height)
         assertTrue(map.validationErrors().isEmpty())
+        val tw = map.tileWidth.toFloat()
+        val th = map.tileHeight.toFloat()
         for (x in 0 until map.width) {
             assertEquals(TileCollision.EMPTY, map.collision(x, ForestReconstruction.GROUND - 1))
             assertEquals(TileCollision.SOLID, map.collision(x, ForestReconstruction.GROUND))
-            assertTrue(map.overlapsSolid(x * 16f, 304f, x * 16f + 16f, 320f))
-            assertFalse(map.overlapsSolid(x * 16f, 272f, x * 16f + 16f, 304f))
+            assertTrue(map.overlapsSolid(x * tw, ForestReconstruction.GROUND * th, x * tw + tw, (ForestReconstruction.GROUND + 1) * th))
+            assertFalse(map.overlapsSolid(x * tw, (ForestReconstruction.GROUND - 1) * th, x * tw + tw, ForestReconstruction.GROUND * th))
         }
     }
 

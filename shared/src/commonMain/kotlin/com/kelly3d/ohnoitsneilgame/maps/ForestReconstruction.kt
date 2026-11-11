@@ -12,7 +12,7 @@ object ForestReconstruction {
     val roomNames = listOf("The carved-tree forest", "The clearing", "The tree house")
 
     fun create(): TileMap {
-        val map = TileMap(ROOM_WIDTH * 3, HEIGHT, 16, 16, 8, 4, "forest_tiles.png")
+        val map = TileMap(ROOM_WIDTH * 3, HEIGHT, 32, 32, 8, 4, "forest_tiles.png")
         map.setSpawn(2, GROUND - 2)
         fun tile(x: Int, y: Int, id: Int, layer: MapLayer = MapLayer.BACKGROUND) {
             if (map.contains(x, y)) map.paint(layer, x, y, id)
