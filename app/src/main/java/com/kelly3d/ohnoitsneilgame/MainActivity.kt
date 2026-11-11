@@ -14,7 +14,7 @@ class NeilGameModel : ViewModel() {
 
 class MainActivity : ComponentActivity() {
     private val model: NeilGameModel by viewModels()
-    private lateinit var gameView: OriginalGameView
+    private lateinit var gameView: NeilGameView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -22,7 +22,7 @@ class MainActivity : ComponentActivity() {
             statusBarStyle = androidx.activity.SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
             navigationBarStyle = androidx.activity.SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
         )
-        gameView = OriginalGameView(this)
+        gameView = NeilGameView(this, model.game)
         setContentView(gameView)
         ViewCompat.setOnApplyWindowInsetsListener(gameView) { view, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())

@@ -34,6 +34,11 @@ internal class NeilSprites(resources: Resources) {
             Frame(Rect(x, y, x + width, y + height), baseline)
         }
     }
+    private val amigaSprites = (1..12).map { id ->
+        try {
+            resources.assets.open("amiga/sprites/%03d.png".format(id)).use { BitmapFactory.decodeStream(it) }
+        } catch (_: Exception) { null }
+    }
     private val paint = Paint().apply {
         isAntiAlias = false
         isFilterBitmap = false
@@ -76,7 +81,17 @@ internal class NeilSprites(resources: Resources) {
         block(1f, 5f, 18f, 2f, 0xFF261E47) // Brim
     }
 
-    fun draw(canvas: Canvas, game: NeilGame, x: Float, y: Float) {
+    fun draw(canvas: Canvas, game: NeilGame, x: Float, y: Float, useOriginalArt: Boolean = false) {
+        if (useOriginalArt) {
+            val spriteIdx = if (game.moving) (if (game.facing > 0) 1 else 7) + (game.time * 10).toInt() % 6
+                            else if (game.facing > 0) 1 else 7
+            val amigaBmp = amigaSprites.getOrNull(spriteIdx - 1)
+            if (amigaBmp != null) {
+                destination.set(x - 6f, y - 8f, x + 26f, y + 24f)
+                canvas.drawBitmap(amigaBmp, null, destination, paint)
+                return
+            }
+        }
         val bitmap = atlas
         if (bitmap == null) {
             drawFallback(canvas, game, x, y)
