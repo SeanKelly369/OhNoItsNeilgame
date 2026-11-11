@@ -370,7 +370,7 @@ class NeilGameView(context: Context, private val game: NeilGame) : SurfaceView(c
         rect(c, x + 3, 210f + bob, 3f, 3f, ink)
     }
     private fun neil(c: Canvas) {
-        neilSprites.draw(c, game, loop.renderX, loop.renderY, useOriginalArt = useOriginalArt)
+        neilSprites.draw(c, game, loop.renderX, loop.renderY, useOriginalArt = false)
     }
 
     private fun drawOverlay(c: Canvas) {
