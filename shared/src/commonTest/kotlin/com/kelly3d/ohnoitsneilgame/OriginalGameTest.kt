@@ -11,6 +11,12 @@ class OriginalGameTest {
         assertEquals(144f,g.y,.01f)
         assertTrue(g.x<181);assertTrue(g.grounded)
     }
+    @Test fun initialPositionIsMovedOutOfSolidTiles() {
+        val g = world({ x, y -> if (y == 11 || (x == 10 && y in 8..10)) 50 else 0 })
+        val start = g.x
+        repeat(30) { g.step(1f / 120, -1) }
+        assertTrue(g.x < start)
+    }
     @Test fun jumpsThroughOneWayPlatformAndLandsOnTop() {
         val g=world({_,y->when(y){11->50;8->51;else->0}})
         g.enter(62,100f,144f)
@@ -44,5 +50,33 @@ class OriginalGameTest {
         g.enter(59,302f,100f)
         repeat(120) {g.step(1f/120,1)}
         assertEquals(59,g.room)
+    }
+    @Test fun modernSpriteFramesFollowMovementState() {
+        val g=world()
+        g.enter(62,100f,100f)
+        g.step(1f/120,0)
+        assertEquals(NeilSpriteFrames.FALL,g.spriteFrame)
+        repeat(120) {g.step(1f/120,0)}
+        assertTrue(g.grounded)
+        repeat(30) {g.step(1f/120,0)}
+        assertEquals(NeilSpriteFrames.IDLE_RIGHT,g.spriteFrame)
+        g.step(1f/120,-1)
+        assertEquals(-1,g.facing)
+        assertTrue(g.spriteFrame in NeilSpriteFrames.WALK_START until NeilSpriteFrames.WALK_START+NeilSpriteFrames.WALK_COUNT)
+        g.jump();g.step(1f/120,0)
+        assertEquals(NeilSpriteFrames.JUMP,g.spriteFrame)
+    }
+    @Test fun holdsPositionOnLadderAndShowsClimbFrames() {
+        val g=world({x,y->if(y==11)50 else if(x==10)10 else 0})
+        g.enter(62,152f,144f)
+        repeat(60) {g.step(1f/120,0,-1)}
+        assertTrue(g.climbing);assertTrue(g.frameFacesCamera)
+        assertTrue(g.spriteFrame==NeilSpriteFrames.CLIMB_LEFT || g.spriteFrame==NeilSpriteFrames.CLIMB_RIGHT)
+        val held=g.y
+        repeat(60) {g.step(1f/120,0)}
+        assertEquals(held,g.y,.5f)
+        assertEquals(NeilSpriteFrames.CLIMB_REST,g.spriteFrame)
+        repeat(120) {g.step(1f/120,1)}
+        assertFalse(g.climbing)
     }
 }

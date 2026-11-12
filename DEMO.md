@@ -1,32 +1,32 @@
-# Oh No! It's Neil — The Mosswood Mix-up
+# Oh No! It's Neil — Amiga Remastered
 
 ![Oh No! It's Neil — A classic adventure reimagined](art/branding/neil_logo.png)
 
-A self-contained, playable Android and iOS prototype inspired by classic item-puzzle platform adventures.
-The world is drawn in code; Neil's sprites and the game branding are bundled artwork.
-No downloads, accounts or permissions are required. This prototype has no audio.
+A self-contained Android and iOS adventure built on Sean Kelly's original Amiga game files (`MAIN_FILES`), combined with the modern, high-resolution Neil character sprite atlas.
 
-The logo appears in the game header, title/pause/completion screens and platform launch screens.
-The stacked variant supplies the Android adaptive launcher and iOS app icons.
-See [branding assets and generation prompts](art/branding/README.md).
+The original 71 occupied rooms, collision layers (`GAME_MAP.VAL`), items (`OBJECTS.DAT`), and object names have been remastered into 4x high-resolution tiles and rendered smoothly alongside the modern animated Neil.
 
-## Play
-Run the app configuration in Android Studio. Tap the gold start button.
-Phones prefer landscape; the game also fits portrait and resizable windows.
+## Features & Upgrades
+- **Modern Neil Character**: The high-res animated Neil sprite atlas (`neil_sprite_atlas.png`) powers the player animations — idle, walk cycle, jumps, falls, landing squish, and ladder climbing poses (`CLIMB_LEFT`, `CLIMB_RIGHT`, `CLIMB_REST`).
+- **High-Res Amiga World**: All 71 room backgrounds and 260 item sprites are upscaled to 4x (1280×768 room canvases) via edge-directed xBR smoothing (`:shared:exportAmigaHd`), eliminating pixel chunkiness while preserving original geometry and color contrast.
+- **Accurate Physics & Ladders**: Tile collision (solid blocks, one-way ledges, ladders) directly reflects original Amiga map data. Players can climb ladders, pause mid-rung, jump off, and navigate across room boundaries.
+- **Room Atlas & Map Browser**: Tap the `MAP` button (or press `M`) at any time to inspect visited and unvisited rooms across the kingdom and quickly warp to explored locations.
+- **Persistent State**: Visited rooms, inventory, and player position are saved across sessions via `SharedPreferences`.
 
-- Hold the arrows to walk; press Jump while holding an arrow to leap.
-- Use interacts with the nearby river crossing or cottage.
-- Keyboard: A/D or left/right arrows, Space or up to jump, E to use, P to pause, Enter to start.
-- Collect eight optional stars. Avoid the two moss monsters.
-- Damage returns Neil to a safe bank. Puzzle items stay collected; losing all three hearts refills them.
-- Backgrounding pauses play. Rotation preserves the game in a ViewModel. Process termination starts a new game.
+## Controls
+- **Touch**: On-screen buttons for `<` (left), `>` (right), `UP` (climb up), `DOWN` (climb down), `JUMP`, `USE` (interact/pickup/drop), `MAP` (world atlas).
+- **Keyboard**:
+  - `A` / `D` or Left / Right: Walk
+  - `W` / `S` or Up / Down: Climb ladders
+  - `Space`: Jump
+  - `E` or `Enter`: Interact / Pick up items
+  - `M`: Room Atlas
+  - `P` or `Esc`: Pause / Inventory
 
-## Puzzle walkthrough
-1. Climb the three woodland platforms and collect the plank.
-2. Stand beside the left bridge post and press Use.
-3. Cross the repaired bridge and climb the three ruins platforms for the brass key.
-4. Reach the cottage at the far right and press Use.
-5. Play Again resets the adventure and collectibles.
+## Building and Exporting Art
+- Build and run Android: `./gradlew :app:assembleDebug` or Run in Android Studio
+- Re-run the 4x HD tile upscaler: `./gradlew :shared:exportAmigaHd`
+- Run shared unit tests: `./gradlew :shared:jvmTest`
 
 ## Code Architecture (Kotlin Multiplatform)
 - `:shared` (Multiplatform Library):

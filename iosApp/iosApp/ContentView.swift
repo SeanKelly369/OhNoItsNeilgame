@@ -2,143 +2,152 @@ import SwiftUI
 import Shared
 
 struct ContentView: View {
-    @StateObject private var controller: GameController
+    @StateObject private var controller = GameController()
     @Environment(\.scenePhase) private var scenePhase
-    @State private var showingAmigaRooms = false
-
-    init(controller: GameController = GameController()) {
-        _controller = StateObject(wrappedValue: controller)
-    }
 
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                Color(red: 14/255, green: 24/255, blue: 40/255)
+                Color(red: 9/255, green: 15/255, blue: 24/255)
                     .ignoresSafeArea()
 
-                TimelineView(.animation) { context in
-                    let frame = controller.frame
-                    Canvas { ctx, size in
-                        controller.draw(context: &ctx, size: size, frame: frame)
-                    }
-                    .allowsHitTesting(false)
-                    .onChange(of: context.date) { date in
-                        controller.tick(date: date)
-                    }
+                Canvas { ctx, size in
+                    controller.draw(context: &ctx, size: size)
+                }
+                .allowsHitTesting(false)
+                .onReceive(Timer.publish(every: 1.0 / 60.0, on: .main, in: .common).autoconnect()) { date in
+                    controller.tick(date: date)
                 }
 
                 ControlOverlay(controller: controller)
-                if controller.game.phase == .title {
-                    VStack {
-                        HStack {
-                            Spacer()
-                            Button("AMIGA ROOMS") { showingAmigaRooms = true }
-                                .font(.system(size: 12, weight: .bold, design: .monospaced))
-                                .padding().background(Color.black.opacity(0.8))
-                        }
-                        Spacer()
-                    }
-                }
             }
         }
         .statusBar(hidden: true)
-        .sheet(isPresented: $showingAmigaRooms) { AmigaRoomReferenceView() }
         .onChange(of: scenePhase) { phase in
-            if phase != .active { controller.suspend() }
+            if phase != .active { controller.pause() }
         }
-        .onDisappear { controller.suspend() }
-    }
-}
-
-/// Immutable drawing input: Kotlin's mutable game properties aren't observable by SwiftUI.
-struct GameFrame {
-    let x: Float
-    let y: Float
-    let spriteFrame: Int
-    let facing: Int32
-    let hearts: Int
-    let starCount: Int
-    let bridge: Bool
-    let plank: Bool
-    let key: Bool
-    let objective: String
-
-    init(game: NeilGame, loop: NeilGameLoop) {
-        x = loop.renderX
-        y = loop.renderY
-        spriteFrame = Int(game.spriteFrame)
-        facing = game.facing
-        hearts = Int(game.hearts)
-        starCount = game.collected.count
-        bridge = game.bridge
-        plank = game.plank
-        key = game.key
-        objective = game.phase == .title
-            ? "A LITTLE ADVENTURE. A BIG OH NO." : game.objective.uppercased()
+        .onDisappear { controller.pause() }
     }
 }
 
 final class GameController: ObservableObject {
-    let game: NeilGame
-    let loop: NeilGameLoop
+    let game: OriginalGame
+    let usedRooms: Set<Int>
     private let sprites = NeilSprites()
-    @Published private(set) var frame: GameFrame
+    private var imageCache: [String: UIImage] = [:]
 
-    init() {
-        let game = NeilGame()
-        let loop = NeilGameLoop(game: game)
-        self.game = game
-        self.loop = loop
-        frame = GameFrame(game: game, loop: loop)
-    }
-
-    @Published private(set) var isPlaying = false
+    @Published private(set) var isTitle = true
     @Published private(set) var isPaused = false
+    @Published private(set) var isMap = false
+    @Published private(set) var mapPage = 0
     @Published private(set) var controlResetVersion = 0
-    private(set) var direction: Int32 = 0
-    var controlsEnabled: Bool { isPlaying && !isPaused }
 
+    private(set) var direction: Int32 = 0
+    private(set) var climb: Int32 = 0
+    private var accumulator: Float = 0
     private var lastDate: Date?
 
-    func setDirection(_ direction: Int32) {
-        self.direction = controlsEnabled ? direction : 0
+    var controlsEnabled: Bool { !isTitle && !isPaused && !isMap }
+
+    init() {
+        var loadedRooms: [OriginalGame.Room] = []
+        var loadedItems: [OriginalGame.Item] = []
+        var used: Set<Int> = []
+
+        if let worldURL = Bundle.main.url(forResource: "world", withExtension: "json", subdirectory: "sprites/amiga"),
+           let jsonString = try? String(contentsOf: worldURL, encoding: .utf8) {
+            let pair = OriginalWorldData.shared.parse(json: jsonString)
+            loadedRooms = pair.first as? [OriginalGame.Room] ?? []
+            loadedItems = pair.second as? [OriginalGame.Item] ?? []
+            for r in loadedRooms where r.occupied {
+                used.insert(Int(r.id))
+            }
+        }
+
+        self.game = OriginalGame(rooms: loadedRooms, objects: loadedItems)
+        self.usedRooms = used
+        loadSave()
     }
+
+    func setDirection(_ dir: Int32) { self.direction = dir }
+    func setClimb(_ cl: Int32) { self.climb = cl }
 
     func activate(_ control: GameControl) {
+        if control == .map && isMap {
+            isMap = false
+            resetControls()
+            return
+        }
         guard controlsEnabled else { return }
         switch control {
-        case .jump: game.jump()
+        case .jump:
+            game.jump()
         case .use:
-            game.interact()
-            isPlaying = game.phase == .playing
-            if !isPlaying { resetControls() }
-        default: break
+            use()
+        case .map:
+            isMap = !isMap
+            direction = 0
+            climb = 0
+            save()
+        default:
+            break
         }
-        publishFrame()
     }
 
-    func startOrResume() {
-        if !isPaused { game.start() }
-        isPlaying = game.phase == .playing
+    func togglePause() {
+        isPaused = !isPaused
+        isMap = false
+        direction = 0
+        climb = 0
+        save()
+    }
+
+    func startAdventure() {
+        isTitle = false
         isPaused = false
+        isMap = false
         resetControls()
     }
 
-    func suspend() {
-        if game.phase == .playing { isPaused = true }
+    func pause() {
+        if !isTitle { isPaused = true }
         resetControls()
+        save()
     }
 
     private func resetControls() {
         direction = 0
+        climb = 0
         lastDate = nil
-        loop.reset()
+        accumulator = 0
         controlResetVersion += 1
-        publishFrame()
     }
 
-    private func publishFrame() {
-        frame = GameFrame(game: game, loop: loop)
+    func use() {
+        if game.interact() {
+            save()
+            return
+        }
+        game.message = "No loose item nearby. Puzzle interactions are not restored yet."
+    }
+
+    func dropItem(at slot: Int) {
+        if slot >= 0 && slot < game.inventory.count {
+            game.drop(index: Int32(slot))
+            save()
+        }
+    }
+
+    func warpToRoom(_ roomId: Int) {
+        game.enter(id: Int32(roomId), px: 152, py: 64)
+        isMap = false
+        resetControls()
+        save()
+    }
+
+    func setMapPage(_ page: Int) {
+        let maxPage = max(0, (usedRooms.count - 1) / 12)
+        mapPage = min(max(0, page), maxPage)
     }
 
     func tick(date: Date) {
@@ -147,138 +156,191 @@ final class GameController: ObservableObject {
             lastDate = now
             return
         }
-        let dt = min(now.timeIntervalSince(last), 0.1)
+        let dt = Float(min(now.timeIntervalSince(last), 0.1))
         lastDate = now
 
         if controlsEnabled {
-            loop.advance(seconds: dt, direction: direction)
-            publishFrame()
+            // OriginalGame is shared Kotlin state, so notify SwiftUI when a frame advances.
+            objectWillChange.send()
+            accumulator += max(0, dt)
+            let stepTime: Float = 1.0 / 120.0
+            while accumulator >= stepTime {
+                game.step(dt: stepTime, direction: direction, climb: climb)
+                accumulator -= stepTime
+            }
+        } else {
+            accumulator = 0
         }
     }
 
-    func draw(context ctx: inout GraphicsContext, size: CGSize, frame: GameFrame) {
-        let targetWidth: CGFloat = 480
-        let targetHeight: CGFloat = 360
+    // MARK: - Asset Resolution with HD fallback
+    func image(named path: String) -> UIImage? {
+        if let cached = imageCache[path] { return cached }
+        // Try 4x HD folder first
+        let hdSub = "sprites/amiga/hd/" + (path as NSString).deletingLastPathComponent
+        let hdName = (path as NSString).lastPathComponent
+        let baseName = (hdName as NSString).deletingPathExtension
+        let ext = (hdName as NSString).pathExtension.isEmpty ? "png" : (hdName as NSString).pathExtension
+
+        if let url = Bundle.main.url(forResource: baseName, withExtension: ext, subdirectory: hdSub),
+           let img = UIImage(contentsOfFile: url.path) {
+            imageCache[path] = img
+            return img
+        }
+        // Fallback to standard resolution
+        let stdSub = "sprites/amiga/" + (path as NSString).deletingLastPathComponent
+        if let url = Bundle.main.url(forResource: baseName, withExtension: ext, subdirectory: stdSub),
+           let img = UIImage(contentsOfFile: url.path) {
+            imageCache[path] = img
+            return img
+        }
+        // Check asset catalog
+        if let img = UIImage(named: baseName) {
+            imageCache[path] = img
+            return img
+        }
+        return nil
+    }
+
+    // MARK: - Persistence
+    private func save() {
+        let state: [String: Any] = [
+            "room": game.room,
+            "x": game.x,
+            "y": game.y
+        ]
+        UserDefaults.standard.set(state, forKey: "original_game_state_ios")
+    }
+
+    private func loadSave() {
+        guard let state = UserDefaults.standard.dictionary(forKey: "original_game_state_ios"),
+              let room = state["room"] as? Int32,
+              let x = state["x"] as? Float,
+              let y = state["y"] as? Float else { return }
+        game.enter(id: room, px: x, py: y)
+    }
+
+    // MARK: - Rendering
+    func draw(context ctx: inout GraphicsContext, size: CGSize) {
+        let targetWidth: CGFloat = 360
+        let targetHeight: CGFloat = 300
         let scale = min(size.width / targetWidth, size.height / targetHeight)
         let offsetX = (size.width - targetWidth * scale) / 2
         let offsetY = (size.height - targetHeight * scale) / 2
 
-        let originalContext = ctx
         ctx.translateBy(x: offsetX, y: offsetY)
         ctx.scaleBy(x: scale, y: scale)
 
-        // Background box
-        let backgroundRect = CGRect(x: 0, y: 0, width: targetWidth, height: targetHeight)
-        ctx.fill(Path(backgroundRect), with: .color(Color(red: 14/255, green: 24/255, blue: 40/255)))
+        // Header Title
+        drawText(&ctx, text: "OH NO! IT'S NEIL", x: 20, y: 17, size: 12, color: .gold)
+        drawText(&ctx, text: "AMIGA REMASTERED", x: 20, y: 29, size: 6, color: .cream)
+        drawText(&ctx, text: isPaused ? "RESUME" : "PAUSE", x: 304, y: 17, size: 7, color: .cream)
 
-        // Use the same aspect-fit artwork as the Android header.
-        let logo = ctx.resolve(Image("NeilLogo"))
-        let logoScale = min(198 / logo.size.width, 38 / logo.size.height)
-        let logoSize = CGSize(width: logo.size.width * logoScale, height: logo.size.height * logoScale)
-        ctx.draw(logo, in: CGRect(x: 12 + (198 - logoSize.width) / 2,
-                                 y: 1 + (38 - logoSize.height) / 2,
-                                 width: logoSize.width, height: logoSize.height))
+        // 320x192 Game Viewport at (20, 36)
+        var gameCtx = ctx
+        gameCtx.translateBy(x: 20, y: 36)
+        gameCtx.clip(to: Path(CGRect(x: 0, y: 0, width: 320, height: 192)))
 
-        let heartsText = "LIFE " + String(repeating: "♥", count: frame.hearts)
-        drawText(&ctx, text: heartsText, x: 222, y: 17, size: 10, color: Color(red: 255/255, green: 131/255, blue: 144/255))
+        // Room Background
+        let roomPath = String(format: "rooms/room_%03d.png", game.room)
+        if let roomImg = image(named: roomPath) {
+            gameCtx.draw(Image(uiImage: roomImg), in: CGRect(x: 0, y: 0, width: 320, height: 192))
+        }
 
-        let starsText = "STARS \(frame.starCount)/8"
-        drawText(&ctx, text: starsText, x: 335, y: 17, size: 9, color: .gold)
-
-        let bagText = frame.bridge ? "BRIDGE: OK" : (frame.plank ? "BAG: PLANK" : "BAG: EMPTY")
-        drawText(&ctx, text: bagText, x: 222, y: 31, size: 7, color: .cream)
-
-        let keyText = frame.key ? "KEY: YES" : "KEY: --"
-        drawText(&ctx, text: keyText, x: 335, y: 31, size: 7, color: .cream)
-
-        // World Clip Area
-        let headerContext = ctx
-        let clipPath = Path(CGRect(x: 0, y: 40, width: 480, height: 230))
-        ctx.clip(to: clipPath)
-
-        let cameraX = CGFloat(max(0, min(960, frame.x - 220)))
-
-        ctx.translateBy(x: 0, y: 40)
-        ctx.fill(Path(CGRect(x: 0, y: 0, width: 480, height: 230)), with: .color(Color(red: 23/255, green: 43/255, blue: 70/255)))
-
-        // Render 90s Amiga room background artwork across the world
-        let r62 = ctx.resolve(Image("room_062"))
-        let r15 = ctx.resolve(Image("room_015"))
-        let r00 = ctx.resolve(Image("room_000"))
-
-        let bgContext = ctx
-        ctx.translateBy(x: -cameraX, y: 0)
-        ctx.draw(r62, in: CGRect(x: 0, y: 0, width: 480, height: 230))
-        ctx.draw(r15, in: CGRect(x: 480, y: 0, width: 480, height: 230))
-        ctx.draw(r00, in: CGRect(x: 960, y: 0, width: 480, height: 230))
-        ctx = bgContext
-
-        // World Objects & Platforms
-        ctx.translateBy(x: -cameraX, y: 0)
-
-        // Bridge
-        if frame.bridge {
-            for i in 0..<14 {
-                ctx.fill(Path(CGRect(x: 650 + i * 10, y: 216, width: 9, height: 8)), with: .color(Color(red: 199/255, green: 152/255, blue: 98/255)))
+        // Room Items
+        for item in game.objects where item.room == game.room {
+            let itemPath = String(format: "sprites/%03d.png", item.sprite)
+            if let itemImg = image(named: itemPath) {
+                let w = itemImg.size.width / (itemImg.size.width > 32 ? 4.0 : 1.0)
+                let h = itemImg.size.height / (itemImg.size.height > 32 ? 4.0 : 1.0)
+                gameCtx.draw(Image(uiImage: itemImg), in: CGRect(x: CGFloat(item.x), y: CGFloat(item.y), width: w, height: h))
             }
         }
 
-        // Neil Character Drawing
-        drawNeil(&ctx, frame: frame)
+        // Neil Character (Feet on floor at y+32, center x+7.5)
+        let invulnerableFlash = game.invulnerable > 0 && Int(game.time * 12) % 2 == 1
+        if !invulnerableFlash {
+            let facing = game.frameFacesCamera ? 1 : game.facing
+            let drawn = sprites.draw(
+                gameCtx,
+                frame: Int(game.spriteFrame),
+                facing: facing,
+                x: CGFloat(game.x + 7.5),
+                y: CGFloat(game.y + 32),
+                height: 46
+            )
+            if !drawn {
+                let neilPath = String(format: "sprites/%03d.png", game.sprite)
+                if let fallback = image(named: neilPath) {
+                    gameCtx.draw(Image(uiImage: fallback), in: CGRect(x: CGFloat(game.x - 8), y: CGFloat(game.y), width: 32, height: 32))
+                }
+            }
+        }
 
-        ctx = headerContext
+        // Status & Inventory strip
+        ctx.fill(Path(CGRect(x: 20, y: 216, width: 320, height: 12)), with: .color(Color(red: 15/255, green: 22/255, blue: 30/255)))
+        drawText(&ctx, text: game.current.name, x: 24, y: 225, size: 7, color: .gold)
+        let status = "STARS \(game.stars)   BAG \(game.inventory.count)/3   ROOMS \(game.visited.count)/71"
+        drawText(&ctx, text: status, x: 20, y: 239, size: 6, color: .cream)
+        drawText(&ctx, text: String(game.message.prefix(53)), x: 20, y: 249, size: 6, color: .cream)
 
-        // Objective Bar
-        drawText(&ctx, text: frame.objective, x: 12, y: 283, size: 8, color: .teal)
-
-        ctx = originalContext
+        // Overlay screens
+        if isTitle {
+            drawTitleOverlay(&ctx)
+        } else if isPaused {
+            drawPauseOverlay(&ctx)
+        } else if isMap {
+            drawMapOverlay(&ctx)
+        }
     }
 
-    private func drawNeil(_ ctx: inout GraphicsContext, frame: GameFrame) {
-        let x = CGFloat(frame.x)
-        let y = CGFloat(frame.y)
-        if sprites.draw(ctx, frame: frame.spriteFrame, facing: frame.facing, x: x, y: y) { return }
-        let isFacingLeft = frame.facing < 0
+    private func drawTitleOverlay(_ ctx: inout GraphicsContext) {
+        ctx.fill(Path(CGRect(x: 20, y: 36, width: 320, height: 192)), with: .color(Color(red: 16/255, green: 28/255, blue: 42/255).opacity(0.93)))
+        drawText(&ctx, text: "OH NO! IT'S NEIL", x: 43, y: 76, size: 23, color: .gold)
+        drawText(&ctx, text: "THE ORIGINAL AMIGA ADVENTURE", x: 64, y: 94, size: 9, color: .cream)
+        drawText(&ctx, text: "Gralda has captured Neil's family.", x: 44, y: 116, size: 8, color: .cream)
+        drawText(&ctx, text: "Escape the tower and explore the kingdom.", x: 30, y: 130, size: 8, color: .cream)
+        drawText(&ctx, text: "Original rooms and items from Sean Kelly's", x: 36, y: 151, size: 7, color: .cream)
+        drawText(&ctx, text: "Reality game files, remastered in HD.", x: 46, y: 162, size: 7, color: .cream)
+        ctx.fill(Path(CGRect(x: 72, y: 179, width: 216, height: 27)), with: .color(.gold))
+        drawText(&ctx, text: "ENTER THE WORLD", x: 113, y: 197, size: 11, color: .black)
+    }
 
-        let hairColor = Color(red: 29/255, green: 95/255, blue: 224/255)
-        let hairShadow = Color(red: 16/255, green: 59/255, blue: 148/255)
-        let hatColor = Color(red: 38/255, green: 30/255, blue: 71/255)
-        let hatBand = Color(red: 240/255, green: 132/255, blue: 24/255)
-        let coatColor = Color(red: 232/255, green: 130/255, blue: 30/255)
-        let satchelColor = Color(red: 89/255, green: 54/255, blue: 25/255)
-        let skinColor = Color(red: 250/255, green: 196/255, blue: 150/255)
-        let pantsColor = Color(red: 59/255, green: 34/255, blue: 19/255)
-        let shoeColor = Color(red: 247/255, green: 224/255, blue: 181/255)
-        let eyeColor = Color(red: 18/255, green: 26/255, blue: 40/255)
+    private func drawPauseOverlay(_ ctx: inout GraphicsContext) {
+        ctx.fill(Path(CGRect(x: 42, y: 64, width: 276, height: 139)), with: .color(Color(red: 16/255, green: 28/255, blue: 42/255).opacity(0.96)))
+        drawText(&ctx, text: "PAUSED", x: 140, y: 91, size: 18, color: .gold)
+        drawText(&ctx, text: "Tap to resume. Progress saves automatically.", x: 52, y: 115, size: 6, color: .cream)
+        drawText(&ctx, text: "Inventory: tap below to drop an item.", x: 52, y: 132, size: 6, color: .cream)
+        for (i, id) in game.inventory.enumerated() {
+            let intId = (id as? NSNumber)?.int32Value ?? (id as? Int32) ?? 0
+            if let it = game.objects.first(where: { $0.id == intId }) {
+                drawText(&ctx, text: "• \(it.name)", x: 60, y: CGFloat(151 + i * 14), size: 8, color: .gold)
+            }
+        }
+    }
 
-        // Hair cascading down back
-        let hairX = isFacingLeft ? x + 12 : x - 2
-        ctx.fill(Path(CGRect(x: hairX, y: y + 6, width: 10, height: 16)), with: .color(hairColor))
-        ctx.fill(Path(CGRect(x: isFacingLeft ? x + 14 : x - 4, y: y + 10, width: 6, height: 10)), with: .color(hairShadow))
+    private func drawMapOverlay(_ ctx: inout GraphicsContext) {
+        ctx.fill(Path(CGRect(x: 12, y: 32, width: 336, height: 220)), with: .color(Color(red: 16/255, green: 28/255, blue: 42/255)))
+        drawText(&ctx, text: "ROOM ATLAS", x: 26, y: 49, size: 12, color: .gold)
+        drawText(&ctx, text: "Tap a room to explore. Arrows change page.", x: 26, y: 62, size: 6, color: .cream)
 
-        // Pants & Shoes
-        ctx.fill(Path(CGRect(x: x + 4, y: y + 17, width: 4, height: 6)), with: .color(pantsColor))
-        ctx.fill(Path(CGRect(x: x + 12, y: y + 17, width: 4, height: 6)), with: .color(pantsColor))
-        ctx.fill(Path(CGRect(x: x + 2, y: y + 22, width: 6, height: 3)), with: .color(shoeColor))
-        ctx.fill(Path(CGRect(x: x + 12, y: y + 22, width: 6, height: 3)), with: .color(shoeColor))
+        let sorted = usedRooms.sorted()
+        let pageRooms = Array(sorted.dropFirst(mapPage * 12).prefix(12))
 
-        // Ochre Tunic Coat
-        ctx.fill(Path(CGRect(x: x + 3, y: y + 10, width: 14, height: 9)), with: .color(coatColor))
-        // Satchel
-        ctx.fill(Path(CGRect(x: x + 5, y: y + 10, width: 10, height: 2)), with: .color(satchelColor))
-        ctx.fill(Path(CGRect(x: isFacingLeft ? x + 14 : x + 2, y: y + 14, width: 4, height: 4)), with: .color(satchelColor))
-
-        // Peach face and nose
-        ctx.fill(Path(CGRect(x: x + 5, y: y + 4, width: 10, height: 7)), with: .color(skinColor))
-        let noseX = isFacingLeft ? x + 1 : x + 14
-        ctx.fill(Path(CGRect(x: noseX, y: y + 6, width: 5, height: 3)), with: .color(skinColor))
-        let eyeX = isFacingLeft ? x + 7 : x + 11
-        ctx.fill(Path(CGRect(x: eyeX, y: y + 6, width: 2, height: 2)), with: .color(eyeColor))
-
-        // Floppy hat with orange band
-        ctx.fill(Path(CGRect(x: x + 4, y: y, width: 12, height: 4)), with: .color(hatColor))
-        ctx.fill(Path(CGRect(x: x + 3, y: y + 4, width: 14, height: 2)), with: .color(hatBand))
-        ctx.fill(Path(CGRect(x: x + 1, y: y + 5, width: 18, height: 2)), with: .color(hatColor))
+        for (i, id) in pageRooms.enumerated() {
+            let left = CGFloat(24 + (i % 4) * 79)
+            let top = CGFloat(70 + (i / 4) * 53)
+            let path = String(format: "rooms/room_%03d.png", id)
+            if let img = image(named: path) {
+                ctx.draw(Image(uiImage: img), in: CGRect(x: left, y: top, width: 73, height: 40))
+            }
+            let isVisited = game.visited.contains(KotlinInt(integerLiteral: id))
+            let name = game.rooms.first(where: { $0.id == Int32(id) })?.name ?? "Room \(id)"
+            drawText(&ctx, text: "\(id + 1) " + String(name.prefix(13)), x: left, y: top + 48, size: 5, color: isVisited ? .gold : .cream)
+        }
+        drawText(&ctx, text: "< PREVIOUS", x: 24, y: 243, size: 8, color: .cream)
+        drawText(&ctx, text: "CLOSE", x: 159, y: 243, size: 8, color: .gold)
+        drawText(&ctx, text: "NEXT >", x: 280, y: 243, size: 8, color: .cream)
     }
 
     private func drawText(_ ctx: inout GraphicsContext, text: String, x: CGFloat, y: CGFloat, size: CGFloat, color: Color) {
@@ -294,49 +356,76 @@ struct ControlOverlay: View {
     @ObservedObject var controller: GameController
 
     var body: some View {
-        VStack {
-            Spacer()
-
-            if !controller.controlsEnabled {
-                VStack(spacing: 8) {
-                    Image("NeilLogo")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxWidth: 352, maxHeight: controller.isPaused || controller.game.phase == .won ? 48 : 80)
-                        .accessibilityLabel("Oh No! It's Neil. A classic adventure reimagined.")
-
-                    Text(controller.isPaused ? "TAKE A BREATHER" : (controller.game.phase == .won ? "NEIL MADE IT HOME!" : "THE MOSSWOOD MIX-UP"))
-                        .font(.system(size: 16, weight: .bold, design: .monospaced))
-                        .foregroundColor(.gold)
-                        .minimumScaleFactor(0.75)
-                        .lineLimit(1)
-
-                    Text(controller.game.phase == .won ? "Kettle on. Feet up. Crisis averted." : "A lost key. A broken bridge. A very long day.")
-                        .font(.system(size: 12, design: .monospaced))
-                        .foregroundColor(.teal)
-
-                    Button(action: controller.startOrResume) {
-                        Text(controller.isPaused ? "RESUME" : (controller.game.phase == .won ? "PLAY AGAIN" : "START ADVENTURE"))
-                            .font(.system(size: 14, weight: .bold, design: .monospaced))
-                            .padding(.horizontal, 24)
-                            .padding(.vertical, 12)
-                            .background(Color.gold)
-                            .foregroundColor(Color(red: 14/255, green: 24/255, blue: 40/255))
-                            .cornerRadius(8)
+        GeometryReader { proxy in
+            VStack(spacing: 0) {
+                // Top tap bar (for Pause / Resume button)
+                HStack {
+                    Spacer()
+                    Button(action: controller.togglePause) {
+                        Text(controller.isPaused ? "RESUME" : "PAUSE")
+                            .font(.system(size: 11, weight: .bold, design: .monospaced))
+                            .foregroundColor(.cream)
+                            .padding(8)
                     }
+                    .padding(.trailing, 16)
                 }
-                .padding(16)
-                .background(Color(red: 14/255, green: 24/255, blue: 40/255).opacity(0.95))
-                .cornerRadius(12)
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.gold, lineWidth: 2))
-                .padding(.horizontal, 32)
-                .padding(.vertical, 8)
-            }
+                .frame(height: 36)
 
-            GameControls(controller: controller)
-                .frame(height: 48)
-                .padding(.horizontal, 24)
-                .padding(.bottom, 24)
+                // Middle area handles title tap, pause unpause, or room atlas tap
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture { location in
+                        handleViewportTap(location: location, size: proxy.size)
+                    }
+
+                // Bottom control buttons
+                GameControls(controller: controller)
+                    .frame(height: 48)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 12)
+            }
+        }
+    }
+
+    private func handleViewportTap(location: CGPoint, size: CGSize) {
+        let targetWidth: CGFloat = 360
+        let targetHeight: CGFloat = 300
+        let scale = min(size.width / targetWidth, size.height / targetHeight)
+        let offsetX = (size.width - targetWidth * scale) / 2
+        let offsetY = (size.height - targetHeight * scale) / 2
+
+        let x = (location.x - offsetX) / scale
+        // The tap gesture is attached below the 36-point header.
+        let y = (location.y + 36 - offsetY) / scale
+
+        if controller.isTitle {
+            controller.startAdventure()
+            return
+        }
+        if controller.isPaused {
+            let slot = Int((y - 140) / 14)
+            if y >= 140 && y <= 182 && slot >= 0 && slot < controller.game.inventory.count {
+                controller.dropItem(at: slot)
+            } else {
+                controller.togglePause()
+            }
+            return
+        }
+        if controller.isMap {
+            if y >= 230 {
+                if x < 120 { controller.setMapPage(controller.mapPage - 1) }
+                else if x > 240 { controller.setMapPage(controller.mapPage + 1) }
+                else { controller.activate(.map) }
+            } else if y >= 70 && y <= 229 && x >= 24 && x <= 340 {
+                let col = Int((x - 24) / 79)
+                let row = Int((y - 70) / 53)
+                let index = controller.mapPage * 12 + row * 4 + col
+                let sorted = controller.usedRooms.sorted()
+                if index < sorted.count {
+                    controller.warpToRoom(sorted[index])
+                }
+            }
+            return
         }
     }
 }
@@ -347,6 +436,7 @@ struct GameControls: UIViewRepresentable {
     func makeUIView(context: Context) -> GameControlsView {
         let view = GameControlsView()
         view.onDirectionChange = { [weak controller] in controller?.setDirection($0) }
+        view.onClimbChange = { [weak controller] in controller?.setClimb($0) }
         view.onAction = { [weak controller] in controller?.activate($0) }
         return view
     }
@@ -359,56 +449,6 @@ struct GameControls: UIViewRepresentable {
     static func dismantleUIView(_ view: GameControlsView, coordinator: ()) {
         view.cancelAllInputs()
         view.resignFirstResponder()
-    }
-}
-
-/// Shares the KMP catalogue and the imported room PNGs with Android.
-private struct AmigaRoomReferenceView: View {
-    @Environment(\.dismiss) private var dismiss
-    @State private var roomID: Int32 = 15
-    @State private var artwork: UIImage?
-
-    private var roomLabel: String { AmigaRooms.shared.room(id: roomID).label }
-
-    private func loadArtwork() {
-        let name3 = String(format: "room_%03d", roomID)
-        let name2 = String(format: "room_%02d", roomID)
-        if let img = UIImage(named: name3) ?? UIImage(named: name2) {
-            artwork = img
-        } else if let url = Bundle.main.url(
-            forResource: name2,
-            withExtension: "png", subdirectory: "sprites/amiga"
-        ) {
-            artwork = UIImage(contentsOfFile: url.path)
-        } else {
-            artwork = nil
-        }
-    }
-
-    var body: some View {
-        VStack(spacing: 20) {
-            Text("AMIGA ROOM REFERENCE").font(.headline)
-            Text(String(format: "%02d", roomID) + "  " + roomLabel)
-            Spacer()
-            if let artwork {
-                Image(uiImage: artwork).resizable().interpolation(.none).scaledToFit()
-            } else {
-                Text("Original room artwork has not been imported.\nSee art/AMIGA_IMPORT.md.")
-                    .multilineTextAlignment(.center)
-            }
-            Spacer()
-            Text("Reference order; room exits are not yet mapped.").font(.caption)
-            HStack {
-                Button("Previous") { roomID = (roomID + 99) % 100 }
-                Spacer()
-                Button("Back") { dismiss() }
-                Spacer()
-                Button("Next") { roomID = (roomID + 1) % 100 }
-            }
-        }
-        .padding()
-        .onAppear(perform: loadArtwork)
-        .onChange(of: roomID) { _ in loadArtwork() }
     }
 }
 

@@ -1,7 +1,7 @@
 import UIKit
 
 enum GameControl: CaseIterable {
-    case left, right, use, jump
+    case left, right, up, down, jump, use, map
 
     var direction: Int32 {
         switch self {
@@ -11,12 +11,23 @@ enum GameControl: CaseIterable {
         }
     }
 
+    var climb: Int32 {
+        switch self {
+        case .up: return -1
+        case .down: return 1
+        default: return 0
+        }
+    }
+
     var label: String {
         switch self {
         case .left: return "<"
         case .right: return ">"
-        case .use: return "USE"
+        case .up: return "UP"
+        case .down: return "DOWN"
         case .jump: return "JUMP"
+        case .use: return "USE"
+        case .map: return "MAP"
         }
     }
 }
@@ -29,6 +40,13 @@ struct GameControlInput {
     var direction: Int32 {
         for id in pressOrder.reversed() {
             if let control = held[id], control.direction != 0 { return control.direction }
+        }
+        return 0
+    }
+
+    var climb: Int32 {
+        for id in pressOrder.reversed() {
+            if let control = held[id], control.climb != 0 { return control.climb }
         }
         return 0
     }
@@ -67,6 +85,7 @@ final class GameControlsView: UIView {
     }
 
     var onDirectionChange: ((Int32) -> Void)?
+    var onClimbChange: ((Int32) -> Void)?
     var onAction: ((GameControl) -> Void)?
     var controlsEnabled = false {
         didSet {
@@ -136,24 +155,24 @@ final class GameControlsView: UIView {
 
     override func layoutSubviews() {
         super.layoutSubviews()
-        let unit = min(1, bounds.width / 284)
-        let gap = 12 * unit
-        let arrowWidth = 60 * unit
-        let actionWidth = 64 * unit
-        controlFrames = [
-            .left: CGRect(x: 0, y: 0, width: arrowWidth, height: bounds.height),
-            .right: CGRect(x: arrowWidth + gap, y: 0, width: arrowWidth, height: bounds.height),
-            .use: CGRect(x: bounds.width - 2 * actionWidth - gap, y: 0, width: actionWidth, height: bounds.height),
-            .jump: CGRect(x: bounds.width - actionWidth, y: 0, width: actionWidth, height: bounds.height)
-        ]
+        let count = CGFloat(GameControl.allCases.count)
+        let spacing: CGFloat = 6
+        let totalSpacing = spacing * (count - 1)
+        let buttonWidth = max(24, (bounds.width - totalSpacing) / count)
+        var frames: [GameControl: CGRect] = [:]
+        for (i, control) in GameControl.allCases.enumerated() {
+            let x = CGFloat(i) * (buttonWidth + spacing)
+            frames[control] = CGRect(x: x, y: 0, width: buttonWidth, height: bounds.height)
+        }
+        controlFrames = frames
         for (control, frame) in controlFrames { labels[control]?.frame = frame }
     }
 
     func press(_ control: GameControl, id: AnyHashable) {
         guard controlsEnabled, input.press(control, id: id) else { return }
         publishInput()
-        // Trigger on touch-down, while the movement finger remains held.
-        if control.direction == 0 { onAction?(control) }
+        // Trigger on touch-down, while the movement/climb finger remains held.
+        if control.direction == 0 && control.climb == 0 { onAction?(control) }
     }
 
     func beginTouch(id: AnyHashable, at point: CGPoint) {
@@ -182,6 +201,7 @@ final class GameControlsView: UIView {
 
     private func publishInput() {
         onDirectionChange?(input.direction)
+        onClimbChange?(input.climb)
         updateAppearance()
     }
 
@@ -221,8 +241,11 @@ final class GameControlsView: UIView {
         switch key.keyCode {
         case .keyboardA, .keyboardLeftArrow: return .left
         case .keyboardD, .keyboardRightArrow: return .right
-        case .keyboardSpacebar, .keyboardUpArrow: return .jump
+        case .keyboardW, .keyboardUpArrow: return .up
+        case .keyboardS, .keyboardDownArrow: return .down
+        case .keyboardSpacebar: return .jump
         case .keyboardE, .keyboardReturnOrEnter: return .use
+        case .keyboardM: return .map
         default: return nil
         }
     }

@@ -42,17 +42,41 @@ class OriginalGame(val rooms: List<Room>, val objects: List<Item>) {
     val visited = mutableSetOf(62)
     var invulnerable = 0f
         private set
+    /** On a ladder and not standing on ground; set by [step]. */
+    var climbing = false
+        private set
+    var climbMoving = false
+        private set
+    var landingTime = 0f
+        private set
     val current get() = rooms[room]
+    /** Original Amiga player sprite (SPRITES.GRA bank index), kept as a fallback. */
     val sprite get() = if (moving) (if (facing > 0) 1 else 7) + (time * 10).toInt() % 6
                       else if (facing > 0) 1 else 7
+    /** Modern Neil atlas frame; renderers mirror horizontally by [facing] unless [frameFacesCamera]. */
+    val spriteFrame: Int get() = when {
+        invulnerable > 1.65f -> NeilSpriteFrames.HURT
+        climbing -> if (!climbMoving) NeilSpriteFrames.CLIMB_REST
+            else if ((time * 8).toInt() % 2 == 0) NeilSpriteFrames.CLIMB_LEFT else NeilSpriteFrames.CLIMB_RIGHT
+        !grounded -> if (vy < 0f) NeilSpriteFrames.JUMP else NeilSpriteFrames.FALL
+        landingTime > 0f -> NeilSpriteFrames.LAND
+        moving -> NeilSpriteFrames.WALK_START + (time * 10f).toInt() % NeilSpriteFrames.WALK_COUNT
+        else -> NeilSpriteFrames.IDLE_RIGHT
+    }
+    /** Climbing frames show Neil's back, so they must not be mirrored. */
+    val frameFacesCamera: Boolean get() = climbing && invulnerable <= 1.65f
     private fun attribute(px: Float, py: Float): Int {
         val tx = floor(px / 16).toInt()
         val ty = floor(py / 16).toInt()
         if (tx !in 0..19 || ty !in 0..11) return 0
         return current.collision[ty * 20 + tx]
     }
+    init {
+        if (rooms.getOrNull(room)?.occupied == true) enter(room, x, y)
+    }
+
     fun onLadder() = attribute(x + 8, y + 16) == 10 || attribute(x + 8, y + 30) == 10
-    fun jump() { if (grounded || onLadder()) { vy = -220f; grounded = false } }
+    fun jump() { if (grounded || onLadder()) { vy = -220f; grounded = false; climbing = false } }
     fun enter(id: Int, px: Float = 152f, py: Float = 64f) {
         if (id !in rooms.indices || !rooms[id].occupied) return
         room = id; x = px.coerceIn(0f,304f); y = py.coerceIn(0f,160f)
@@ -63,7 +87,8 @@ class OriginalGame(val rooms: List<Room>, val objects: List<Item>) {
                 .minByOrNull { abs(it.first-px)+abs(it.second-py) }
             if (safe != null) { x=safe.first; y=safe.second }
         }
-        vy = 0f; grounded = false; visited.add(id); message = current.name
+        vy = 0f; grounded = false; climbing = false; climbMoving = false; landingTime = 0f
+        visited.add(id); message = current.name
     }
     private fun blocked(px: Float, py: Float) =
         listOf(3f to 2f, 12f to 2f, 3f to 16f, 12f to 16f, 3f to 30f, 12f to 30f)
@@ -71,11 +96,16 @@ class OriginalGame(val rooms: List<Room>, val objects: List<Item>) {
     fun step(dt: Float, direction: Int, climb: Int = 0) {
         val d = dt.coerceIn(0f,1f/30)
         time += d; invulnerable = (invulnerable-d).coerceAtLeast(0f)
+        landingTime = (landingTime-d).coerceAtLeast(0f)
+        val wasGrounded = grounded
         val dx = direction.coerceIn(-1,1)*80f*d
         if (direction != 0) facing=if(direction>0) 1 else -1
-        moving=dx!=0f
+        val oldX = x
         if (!blocked(x+dx,y)) x+=dx
-        if (climb!=0 && onLadder()) { vy=climb.coerceIn(-1,1)*65f; grounded=false }
+        moving = x != oldX
+        val ladder = onLadder()
+        if (climb!=0 && ladder) { vy=climb.coerceIn(-1,1)*65f; grounded=false }
+        else if (ladder && climbing) vy = 0f // Hold position on the rungs.
         else vy=(vy+480f*d).coerceAtMost(220f)
         val oldBottom=y+32
         val next=y+vy*d
@@ -88,6 +118,9 @@ class OriginalGame(val rooms: List<Room>, val objects: List<Item>) {
                 y=surface-32; vy=0f; grounded=true
             } else if (!blocked(x,next)) y=next else vy=0f
         } else if (!blocked(x,next)) y=next else vy=0f
+        climbing = !grounded && onLadder() && (climb != 0 || climbing)
+        climbMoving = climbing && climb != 0
+        if (!wasGrounded && grounded) landingTime = 0.12f
         when {
             x< -8 -> if(room%15>0 && rooms.getOrNull(room-1)?.occupied==true) enter(room-1,302f,y) else x=0f
             x>312 -> if(room%15<14 && rooms.getOrNull(room+1)?.occupied==true) enter(room+1,1f,y) else x=304f
@@ -127,7 +160,7 @@ class OriginalGame(val rooms: List<Room>, val objects: List<Item>) {
     }
     fun restart() {
         objects.forEach {it.room=it.initialRoom;it.x=it.initialX;it.y=it.initialY}
-        inventory.clear();visited.clear();stars=0;score=0;lives=3;time=0f
+        inventory.clear();visited.clear();stars=0;score=0;lives=3;time=0f;facing=1
         enter(62,152f,134f);invulnerable=0f
     }
 }

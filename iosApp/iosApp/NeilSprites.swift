@@ -56,14 +56,13 @@ final class NeilSprites {
     }
 
     @discardableResult
-    func draw(_ context: GraphicsContext, frame index: Int, facing: Int32, x: CGFloat, y: CGFloat) -> Bool {
+    func draw(_ context: GraphicsContext, frame index: Int, facing: Int32, x: CGFloat, y: CGFloat, height: CGFloat = 38) -> Bool {
         guard frames.indices.contains(index) else { return false }
         let frame = frames[index]
-        let height: CGFloat = 38
         let scale = height / frame.height
         let width = frame.width * scale
         var ctx = context
-        ctx.translateBy(x: x + 10, y: y + 24)
+        ctx.translateBy(x: x, y: y)
         ctx.scaleBy(x: facing < 0 ? -1 : 1, y: 1)
         ctx.draw(frame.image, in: CGRect(x: -width / 2, y: -frame.baseline * scale, width: width, height: height))
         return true

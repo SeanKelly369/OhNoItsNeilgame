@@ -19,6 +19,14 @@ kotlin {
             mainClass.set("com.kelly3d.ohnoitsneilgame.editor.MapEditorKt")
             workingDir(rootProject.projectDir)
         }
+        tasks.register<JavaExec>("exportAmigaHd") {
+            group = "game development"
+            description = "Upscale the decoded Amiga rooms and sprites to 4x into art/sprites/amiga/hd"
+            dependsOn(main.compileTaskProvider)
+            classpath(main.output.allOutputs, main.runtimeDependencyFiles)
+            mainClass.set("com.kelly3d.ohnoitsneilgame.editor.AmigaHdArtKt")
+            workingDir(rootProject.projectDir)
+        }
     }
 
     listOf(

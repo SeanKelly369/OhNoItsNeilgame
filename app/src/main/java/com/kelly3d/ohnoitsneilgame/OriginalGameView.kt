@@ -2,11 +2,16 @@ package com.kelly3d.ohnoitsneilgame
 
 import android.content.Context
 import android.graphics.*
+import android.util.LruCache
 import android.view.*
 import org.json.JSONObject
 import kotlin.math.min
 
-/** Original artwork rendered at 320x192 without bitmap filtering. */
+/**
+ * Original Amiga rooms, collision and items with the modern Neil sprite.
+ * Rooms and items use the 4x remastered art from art/sprites/amiga/hd when present
+ * (see :shared:exportAmigaHd), falling back to the native 320x192 artwork.
+ */
 class OriginalGameView(context: Context) : View(context), Choreographer.FrameCallback {
     private val data = JSONObject(context.assets.open("amiga/world.json").bufferedReader().use { it.readText() })
     private fun ints(a: org.json.JSONArray) = List(a.length()) { a.getInt(it) }
@@ -22,7 +27,16 @@ class OriginalGameView(context: Context) : View(context), Choreographer.FrameCal
             if(room>0) room-1 else -2,r.getInt(2).toFloat(),r.getInt(3).toFloat(),r.getInt(6))
     }.filter {it.sprite>0} })
     private val paint=Paint().apply { isFilterBitmap=false; typeface=Typeface.MONOSPACE }
+    /** HD art is drawn at or below its native size, so filtering keeps it smooth instead of shimmering. */
+    private val hdPaint=Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG)
+    private val neilSprites=NeilSprites(resources)
+    private val dst=RectF()
     private val images=mutableMapOf<String,Bitmap>()
+    /** A 4x room is ~3.9 MB decoded; keep only the current room and its recent neighbours. */
+    private val hdImages=object:LruCache<String,HdImage>(48*1024*1024) {
+        override fun sizeOf(key:String,value:HdImage)=value.bitmap.allocationByteCount
+    }
+    private class HdImage(val bitmap:Bitmap,val scale:Float)
     private val pointers=mutableMapOf<Int,Int>()
     private val keys=mutableSetOf<Int>()
     private var running=false
@@ -62,6 +76,25 @@ class OriginalGameView(context: Context) : View(context), Choreographer.FrameCal
     private fun bitmap(path:String)=images.getOrPut(path) {
         context.assets.open("amiga/"+path).use { BitmapFactory.decodeStream(it) }
     }
+    /** Remastered asset with its scale factor, or the original at scale 1 if it was not exported. */
+    private fun hd(path:String):HdImage = hdImages.get(path) ?: run {
+        val remastered=runCatching {
+            context.assets.open("amiga/hd/"+path).use { BitmapFactory.decodeStream(it) }
+        }.getOrNull()
+        (if(remastered!=null) HdImage(remastered,HD_SCALE) else HdImage(bitmap(path),1f)).also { hdImages.put(path,it) }
+    }
+    private fun drawHd(c:Canvas,path:String,x:Float,y:Float) {
+        val image=hd(path)
+        dst.set(x,y,x+image.bitmap.width/image.scale,y+image.bitmap.height/image.scale)
+        c.drawBitmap(image.bitmap,null,dst,if(image.scale>1f) hdPaint else paint)
+    }
+    private fun drawNeil(c:Canvas) {
+        if(game.invulnerable>0f && (game.time*12).toInt()%2==1) return
+        val facing=if(game.frameFacesCamera) 1 else game.facing
+        // Hitbox spans x+3..x+12 and y..y+32; centre the figure on it with feet on the floor.
+        if(neilSprites.drawFrame(c,game.spriteFrame,facing,game.x+7.5f,game.y+32f,NEIL_FRAME_HEIGHT,hdPaint)) return
+        drawHd(c,"sprites/%03d.png".format(game.sprite),game.x-8,game.y)
+    }
     private fun box(c:Canvas,x:Float,y:Float,w:Float,h:Float,color:Int) {paint.color=color;c.drawRect(x,y,x+w,y+h,paint)}
     private fun text(c:Canvas,t:String,x:Float,y:Float,size:Float=7f,color:Int=cream) {
         paint.color=color;paint.textSize=size;c.drawText(t,x,y,paint)
@@ -73,16 +106,14 @@ class OriginalGameView(context: Context) : View(context), Choreographer.FrameCal
         oy=paddingTop+(height-paddingTop-paddingBottom-300*s)/2
         c.save();c.translate(ox,oy);c.scale(s,s)
         text(c,"OH NO! IT'S NEIL",20f,17f,12f,gold)
-        text(c,"AMIGA RECONSTRUCTION",20f,29f,6f)
+        text(c,"AMIGA REMASTERED",20f,29f,6f)
         text(c,if(paused) "RESUME" else "PAUSE",304f,17f,7f)
         c.save();c.translate(20f,36f);c.clipRect(0f,0f,320f,192f)
-        c.drawBitmap(bitmap("rooms/room_%03d.png".format(game.room)),0f,0f,paint)
+        drawHd(c,"rooms/room_%03d.png".format(game.room),0f,0f)
         game.objects.filter {it.room==game.room}.forEach {item ->
-            val b=bitmap("sprites/%03d.png".format(item.sprite))
-            c.drawBitmap(b,item.x,item.y,paint)
+            drawHd(c,"sprites/%03d.png".format(item.sprite),item.x,item.y)
         }
-        val neil=bitmap("sprites/%03d.png".format(game.sprite))
-        c.drawBitmap(neil,null,RectF(game.x-8,game.y,game.x+24,game.y+32),paint)
+        drawNeil(c)
         c.restore()
         box(c,20f,216f,320f,12f,Color.rgb(15,22,30))
         text(c,game.current.name,24f,225f,7f,gold)
@@ -100,8 +131,8 @@ class OriginalGameView(context: Context) : View(context), Choreographer.FrameCal
             text(c,"THE ORIGINAL AMIGA ADVENTURE",64f,94f,9f)
             text(c,"Gralda has captured Neil's family.",44f,116f,8f)
             text(c,"Escape the tower and explore the kingdom.",30f,130f,8f)
-            text(c,"Original graphics, rooms and items recovered",31f,151f,7f)
-            text(c,"from Sean Kelly's Reality game files.",42f,162f,7f)
+            text(c,"Original rooms and items from Sean Kelly's",36f,151f,7f)
+            text(c,"Reality game files, remastered in HD.",46f,162f,7f)
             box(c,72f,179f,216f,27f,gold)
             text(c,"ENTER THE WORLD",113f,197f,11f,Color.BLACK)
             text(c,"Reconstruction preview - puzzle scripts pending",27f,219f,6f)
@@ -217,5 +248,10 @@ class OriginalGameView(context: Context) : View(context), Choreographer.FrameCal
             game.inventory.addAll(ints(state.getJSONArray("bag")).filter {id->game.objects.any {it.id==id}}.take(3))
             game.visited.addAll(ints(state.getJSONArray("visited")).filter {it in used})
         }.onFailure {game.restart()}
+    }
+    private companion object {
+        const val HD_SCALE=4f
+        /** Full padded atlas frame height in room pixels; the visible figure is roughly 2.2 tiles tall. */
+        const val NEIL_FRAME_HEIGHT=46f
     }
 }

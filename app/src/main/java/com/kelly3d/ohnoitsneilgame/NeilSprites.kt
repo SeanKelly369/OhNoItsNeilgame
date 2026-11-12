@@ -97,16 +97,29 @@ internal class NeilSprites(resources: Resources) {
             drawFallback(canvas, game, x, y)
             return
         }
-        val frame = frames[game.spriteFrame]
-        val height = 38f
+        drawFrame(canvas, game.spriteFrame, game.facing, x + 10f, y + 24f, 38f, paint)
+    }
+
+    /**
+     * Draws one atlas frame with its feet at ([centerX], [baselineY]) in canvas units.
+     * [height] is the full frame height (the figure itself is shorter, because frames are padded).
+     * Returns false when the atlas is unavailable so callers can draw their own fallback.
+     */
+    fun drawFrame(
+        canvas: Canvas, frameIndex: Int, facing: Int, centerX: Float, baselineY: Float,
+        height: Float, framePaint: Paint = paint
+    ): Boolean {
+        val bitmap = atlas ?: return false
+        val frame = frames.getOrNull(frameIndex) ?: return false
         val scale = height / frame.source.height()
         val width = frame.source.width() * scale
         val top = -frame.baseline * scale
         destination.set(-width / 2f, top, width / 2f, top + height)
         canvas.save()
-        canvas.translate(x + 10f, y + 24f)
-        canvas.scale(game.facing.toFloat(), 1f)
-        canvas.drawBitmap(bitmap, frame.source, destination, paint)
+        canvas.translate(centerX, baselineY)
+        canvas.scale(if (facing < 0) -1f else 1f, 1f)
+        canvas.drawBitmap(bitmap, frame.source, destination, framePaint)
         canvas.restore()
+        return true
     }
 }
