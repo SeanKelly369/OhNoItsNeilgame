@@ -44,7 +44,7 @@ class NeilGame {
         landingTime > 0f -> NeilSpriteFrames.LAND
         actionTime > 0f -> NeilSpriteFrames.POINT_RIGHT
         moving -> NeilSpriteFrames.WALK_START +
-            (walkTime * 10f).toInt() % NeilSpriteFrames.WALK_COUNT
+            (walkTime * NeilSpriteFrames.WALK_FPS).toInt() % NeilSpriteFrames.WALK_COUNT
         else -> NeilSpriteFrames.IDLE_RIGHT
     }
     var message = "Find the plank in the treetops."

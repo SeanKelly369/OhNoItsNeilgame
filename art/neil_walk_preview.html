@@ -1,26 +1,53 @@
 <!doctype html>
-<html lang="en"><meta charset="utf-8"><title>Neil walk cycle</title>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Neil walk cycle</title>
 <style>
-body { background:#243442; color:#f7efdf; font:16px system-ui; margin:40px; }
-.stage { height:330px; position:relative; border-bottom:2px solid #71858c; width:626px; max-width:100%; }
-.sprite { width:313px; height:313px; position:absolute; bottom:0; background-image:url('sprites/neil_sprite_atlas.png'); image-rendering:pixelated; animation:walk .6s steps(1,end) infinite; }
-.left { left:313px; transform:scaleX(-1); }
-.paused .sprite { animation-play-state:paused; }
-@keyframes walk {
-0% { background-position:-313px -1252px; bottom:-20px; }
-16.6667% { background-position:-626px -1252px; bottom:-20px; }
-33.3333% { background-position:-939px -1252px; bottom:-20px; }
-50% { background-position:0 -1565px; bottom:-20px; }
-66.6667% { background-position:-313px -1565px; bottom:-20px; }
-83.3333% { background-position:-626px -1565px; bottom:-20px; }
-}
-button,input { margin:16px 12px 0 0; }
+body { background:#243442; color:#f7efdf; font:16px system-ui; margin:32px; }
+canvas { display:block; max-width:100%; height:auto; border-bottom:2px solid #71858c; image-rendering:pixelated; }
+button,label { display:inline-block; margin:16px 12px 0 0; }
+button { padding:8px 16px; }
 </style>
-<h1>Neil’s walk cycle</h1><p>Six frames at the game’s 10 fps, with feet aligned as in both renderers.</p>
-<div class="stage" id="stage"><div class="sprite"></div><div class="sprite left"></div></div>
-<button id="pause">Pause</button><label>Speed <input id="speed" type="range" min="2" max="16" value="10"> <span id="fps">10 fps</span></label>
+<h1>Neil’s walk cycle</h1>
+<p>Twelve poses at 20 fps. One full stride takes 0.6 seconds, with feet aligned as in the game.</p>
+<canvas id="stage" width="626" height="330" aria-label="Neil walking right and left"></canvas>
+<button id="pause">Pause</button><button id="next">Next frame</button>
+<label>Speed <input id="speed" type="range" min="2" max="30" value="20"> <span id="fps">20 fps</span></label>
+<p id="phase"></p>
 <script>
-const stage=document.getElementById('stage'), pause=document.getElementById('pause');
-pause.onclick=()=>{const paused=stage.classList.toggle('paused');pause.textContent=paused?'Play':'Pause';};
-document.getElementById('speed').oninput=e=>{document.querySelectorAll('.sprite').forEach(s=>s.style.animationDuration=(6/e.target.value)+'s');document.getElementById('fps').textContent=e.target.value+' fps';};
-</script></html>
+const canvas=document.getElementById('stage'), ctx=canvas.getContext('2d');
+const pause=document.getElementById('pause'), speed=document.getElementById('speed');
+const atlas=new Image(); atlas.src='sprites/neil_sprite_atlas.png';
+const first=32, count=12, cell=313, baseline=283;
+let playing=true, phase=0, accumulated=0, last;
+function render() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.imageSmoothingEnabled=false;
+  const index=first+phase, sx=index%4*cell, sy=Math.floor(index/4)*cell;
+  for (const [x,direction] of [[cell/2,1],[cell*1.5,-1]]) {
+    ctx.save(); ctx.translate(x,330); ctx.scale(direction,1);
+    ctx.drawImage(atlas,sx,sy,cell,cell,-cell/2,-baseline,cell,cell); ctx.restore();
+  }
+  document.getElementById('phase').textContent='Frame '+(phase+1)+' of '+count;
+}
+pause.onclick=()=>{playing=!playing;pause.textContent=playing?'Pause':'Play';accumulated=0;};
+document.getElementById('next').onclick=()=>{
+  playing=false;pause.textContent='Play';phase=(phase+1)%count;accumulated=0;render();
+};
+speed.oninput=()=>{document.getElementById('fps').textContent=speed.value+' fps';accumulated=0;};
+atlas.onload=()=>{
+  render();
+  requestAnimationFrame(function tick(now) {
+    if (last!==undefined && playing) {
+      accumulated+=Math.min(now-last,250);
+      const interval=1000/Number(speed.value);
+      while(accumulated>=interval){phase=(phase+1)%count;accumulated-=interval;}
+      render();
+    }
+    last=now;requestAnimationFrame(tick);
+  });
+};
+atlas.onerror=()=>{document.getElementById('phase').textContent='Could not load the sprite atlas.';};
+</script>
+</html>

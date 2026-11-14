@@ -83,7 +83,7 @@ internal class NeilSprites(resources: Resources) {
 
     fun draw(canvas: Canvas, game: NeilGame, x: Float, y: Float, useOriginalArt: Boolean = false) {
         if (useOriginalArt) {
-            val spriteIdx = if (game.moving) (if (game.facing > 0) 1 else 7) + (game.time * 10).toInt() % 6
+            val spriteIdx = if (game.moving) (if (game.facing > 0) 1 else 7) + (game.walkTime * 10).toInt() % 6
                             else if (game.facing > 0) 1 else 7
             val amigaBmp = amigaSprites.getOrNull(spriteIdx - 1)
             if (amigaBmp != null) {

@@ -30,14 +30,15 @@ final class NeilSprites {
     var frameCount: Int { frames.count }
     var walkFrameCount: Int { walkFrames.count }
 
-    // Six natural biomechanical walk phases complete a full two-step stride in 0.6 seconds (10 fps).
+    // Matches NeilSpriteFrames: twelve poses in a 0.6-second stride (20 fps).
     static let walkDuration = 0.6
-    static let walkPoseCount = 6
+    static let walkPoseCount = 12
+    static let walkStart = 32
 
     func walkFrameIndex(frame: Int, walkTime: Float) -> Int? {
-        guard walkFrames.count == Self.walkPoseCount, (17...22).contains(frame) else { return nil }
+        guard walkFrames.count == Self.walkPoseCount, (Self.walkStart..<(Self.walkStart + Self.walkPoseCount)).contains(frame) else { return nil }
         if walkTime <= 0 {
-            return frame - 17
+            return frame - Self.walkStart
         }
         let phase = (Double(walkTime) / Self.walkDuration).truncatingRemainder(dividingBy: 1)
         return min(Self.walkPoseCount - 1, Int(phase * Double(Self.walkPoseCount)))
@@ -97,7 +98,8 @@ final class NeilSprites {
             ))
         }
         frames = decoded
-        walkFrames = decoded.count >= 23 ? Array(decoded[17...22]) : []
+        let walkEnd = Self.walkStart + Self.walkPoseCount
+        walkFrames = decoded.count >= walkEnd ? Array(decoded[Self.walkStart..<walkEnd]) : []
     }
 
     @discardableResult

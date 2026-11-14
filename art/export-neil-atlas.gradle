@@ -102,12 +102,28 @@ gradle.projectsEvaluated {
             } finally {
                 graphics.dispose()
             }
+            // Normalize hair, then add the same restrained sheen before checking
+            // unchanged frames. The original source sheets retain their full palette.
+            def rawAtlas = new File(temporaryDir, "neil-raw.png")
+            def darkAtlas = new File(temporaryDir, "neil-dark.png")
+            assert ImageIO.write(atlas, "png", rawAtlas)
+            rootProject.providers.exec {
+                commandLine(new File(System.getProperty("java.home"), "bin/java").absolutePath,
+                    new File(root, "art/RemoveNeilHairHighlights.java").absolutePath,
+                    rawAtlas.absolutePath, darkAtlas.absolutePath)
+            }.result.get().assertNormalExitValue()
+            rootProject.providers.exec {
+                commandLine(new File(System.getProperty("java.home"), "bin/java").absolutePath,
+                    new File(root, "art/AddNeilHairHighlights.java").absolutePath,
+                    darkAtlas.absolutePath, darkAtlas.absolutePath)
+            }.result.get().assertNormalExitValue()
+            atlas = ImageIO.read(darkAtlas)
             def destination = new File(root, "art/sprites")
             destination.mkdirs()
             def atlasFile = new File(destination, "neil_sprite_atlas.png")
             if (walkPath != null && inputPath == null && atlasFile.exists()) {
                 def previous = ImageIO.read(atlasFile)
-                assert previous.width == atlas.width && previous.height == atlas.height
+                assert previous.width == atlas.width && previous.height >= atlas.height
                 for (int py = 0; py < atlas.height; py++) {
                     for (int px = 0; px < atlas.width; px++) {
                         int frame = (int)(py / cellHeight) * 4 + (int)(px / cellWidth)
@@ -123,6 +139,113 @@ gradle.projectsEvaluated {
             new File(destination, "neil_sprite_atlas.json").text = JsonOutput.prettyPrint(JsonOutput.toJson(
                 [image: "neil_sprite_atlas.png", columns: 4, rows: 8, frames: frames])) + "\n"
             println("Exported ${atlas.width} x ${atlas.height} RGBA PNG with ${frames.size()} frames.")
+        }
+        finalizedBy("exportNeilSmoothWalk")
+    }
+
+    // Append a complete twelve-pose cycle without moving any existing atlas index.
+    rootProject.tasks.register("exportNeilSmoothWalk") {
+        onlyIf { new File(rootProject.projectDir, "art/source/neil_walk_cycle_12.png").exists() }
+        doLast {
+            def root = rootProject.projectDir
+            def atlasFile = new File(root, "art/sprites/neil_sprite_atlas.png")
+            def metadataFile = new File(root, "art/sprites/neil_sprite_atlas.json")
+            def previous = ImageIO.read(atlasFile)
+            def manifest = new groovy.json.JsonSlurper().parse(metadataFile)
+            def sheet = ImageIO.read(new File(root, "art/source/neil_walk_cycle_12.png"))
+            assert sheet != null && sheet.colorModel.hasAlpha()
+            assert sheet.width % 4 == 0 && sheet.height % 3 == 0 : "Expected a 4 by 3 walk sheet"
+            assert manifest.frames.size() >= 32 && manifest.columns == 4
+            int cell = manifest.frames[0].width
+            assert previous.width == cell * 4 && previous.height >= cell * 8
+            int sw = (int)(sheet.width / 4), sh = (int)(sheet.height / 3)
+
+            def bounds = { image, int x, int y, int width, int height, boolean hat ->
+                int left = width, top = height, right = -1, bottom = -1
+                for (int py = 0; py < height; py++) {
+                    for (int px = 0; px < width; px++) {
+                        int p = image.getRGB(x + px, y + py)
+                        int r = (p >>> 16) & 255, g = (p >>> 8) & 255, b = p & 255
+                        boolean selected = (p >>> 24) > 128
+                        if (hat) selected &= py < height * 0.4 && r > g * 1.25 && b > r * 1.05
+                        if (selected) {
+                            left = Math.min(left, px); right = Math.max(right, px)
+                            top = Math.min(top, py); bottom = Math.max(bottom, py)
+                        }
+                    }
+                }
+                assert right >= left && bottom >= top : "Missing sprite or purple hat"
+                [left: left, top: top, right: right, bottom: bottom]
+            }
+            def sourceBounds = (0..<12).collect { i ->
+                bounds(sheet, (i % 4) * sw, (int)(i / 4) * sh, sw, sh, false)
+            }
+            def heights = sourceBounds.collect { it.bottom - it.top + 1 }.sort()
+            def reference = manifest.frames[17]
+            def refBounds = bounds(previous, reference.x as int, reference.y as int, cell, cell, false)
+            def refHat = bounds(previous, reference.x as int, reference.y as int, cell, cell, true)
+            double scale = (refBounds.bottom - refBounds.top + 1) / ((heights[5] + heights[6]) / 2.0)
+            double anchorX = (refHat.left + refHat.right) / 2.0
+            int baseline = reference.baseline
+            def packed = new BufferedImage(cell * 4, cell * 3, BufferedImage.TYPE_INT_ARGB)
+            def graphics = packed.createGraphics()
+            try {
+                graphics.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION,
+                    java.awt.RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR)
+                (0..<12).each { i ->
+                    int sx = (i % 4) * sw, sy = (int)(i / 4) * sh
+                    def box = sourceBounds[i]
+                    def hat = bounds(sheet, sx, sy, sw, sh, true)
+                    int dx = (int)Math.round(anchorX - (hat.left + hat.right) / 2.0 * scale)
+                    int dy = baseline - (int)Math.round((box.bottom + 1) * scale)
+                    int dw = (int)Math.round(sw * scale), dh = (int)Math.round(sh * scale)
+                    assert dx + box.left * scale >= 0 && dx + (box.right + 1) * scale <= cell
+                    assert dy + box.top * scale >= 0 && dy + (box.bottom + 1) * scale <= cell
+                    int x = (i % 4) * cell, y = (int)(i / 4) * cell
+                    graphics.setClip(x, y, cell, cell)
+                    graphics.drawImage(sheet, x + dx, y + dy, x + dx + dw, y + dy + dh,
+                        sx, sy, sx + sw, sy + sh, null)
+                }
+            } finally {
+                graphics.dispose()
+            }
+            def rawWalk = new File(temporaryDir, "walk-raw.png")
+            def darkWalk = new File(temporaryDir, "walk-dark.png")
+            assert ImageIO.write(packed, "png", rawWalk)
+            rootProject.providers.exec {
+                commandLine(new File(System.getProperty("java.home"), "bin/java").absolutePath,
+                    new File(root, "art/RemoveNeilHairHighlights.java").absolutePath,
+                    rawWalk.absolutePath, darkWalk.absolutePath)
+            }.result.get().assertNormalExitValue()
+            rootProject.providers.exec {
+                commandLine(new File(System.getProperty("java.home"), "bin/java").absolutePath,
+                    new File(root, "art/AddNeilHairHighlights.java").absolutePath,
+                    darkWalk.absolutePath, darkWalk.absolutePath)
+            }.result.get().assertNormalExitValue()
+            packed = ImageIO.read(darkWalk)
+            def atlas = new BufferedImage(cell * 4, cell * 11, BufferedImage.TYPE_INT_ARGB)
+            def originalPixels = previous.getRGB(0, 0, cell * 4, cell * 8, null, 0, cell * 4)
+            atlas.setRGB(0, 0, cell * 4, cell * 8, originalPixels, 0, cell * 4)
+            atlas.setRGB(0, cell * 8, cell * 4, cell * 3,
+                packed.getRGB(0, 0, cell * 4, cell * 3, null, 0, cell * 4), 0, cell * 4)
+            def frames = manifest.frames.take(32)
+            def silhouettes = [] as Set
+            (0..<12).each { i ->
+                int x = (i % 4) * cell, y = (int)(i / 4) * cell
+                def box = bounds(packed, x, y, cell, cell, false)
+                assert box.bottom + 1 in (baseline - 1)..(baseline + 1) : "Foot baseline drift"
+                silhouettes.add(java.util.Arrays.hashCode(packed.getRGB(x, y + (int)(cell * 0.6),
+                    cell, cell - (int)(cell * 0.6), null, 0, cell)))
+                frames.add([name: "smooth_walk_right_${i + 1}", x: x, y: y + cell * 8,
+                    width: cell, height: cell, baseline: box.bottom + 1])
+            }
+            assert silhouettes.size() == 12 : "All twelve lower-body poses must be distinct"
+            assert java.util.Arrays.equals(originalPixels,
+                atlas.getRGB(0, 0, cell * 4, cell * 8, null, 0, cell * 4))
+            assert ImageIO.write(atlas, "png", atlasFile)
+            metadataFile.text = JsonOutput.prettyPrint(JsonOutput.toJson(
+                [image: "neil_sprite_atlas.png", columns: 4, rows: 11, frames: frames])) + "\n"
+            println("Exported 12 distinct walk poses at indices 32–43; original 32 frames pixel-identical.")
         }
     }
 }

@@ -77,7 +77,7 @@ class OriginalGame(
             else if ((time * 8).toInt() % 2 == 0) NeilSpriteFrames.CLIMB_LEFT else NeilSpriteFrames.CLIMB_RIGHT
         !grounded -> if (vy < 0f) NeilSpriteFrames.JUMP else NeilSpriteFrames.FALL
         landingTime > 0f -> NeilSpriteFrames.LAND
-        moving -> NeilSpriteFrames.WALK_START + (walkTime * 10f).toInt() % NeilSpriteFrames.WALK_COUNT
+        moving -> NeilSpriteFrames.WALK_START + (walkTime * NeilSpriteFrames.WALK_FPS).toInt() % NeilSpriteFrames.WALK_COUNT
         else -> NeilSpriteFrames.IDLE_RIGHT
     }
     /** Climbing frames show Neil's back, so they must not be mirrored. */

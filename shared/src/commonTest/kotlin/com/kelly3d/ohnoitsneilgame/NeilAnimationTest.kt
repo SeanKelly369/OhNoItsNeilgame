@@ -6,7 +6,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class NeilAnimationTest {
-    @Test fun walkingUsesAllSixNewFramesInBothDirections() {
+    @Test fun walkingUsesAllTwelveFramesInBothDirections() {
         for (direction in listOf(-1, 1)) {
             val game = NeilGame().apply { start(); x = 200f }
             val seen = mutableSetOf<Int>()
@@ -14,7 +14,7 @@ class NeilAnimationTest {
                 game.step(1f / 120f, direction)
                 seen += game.spriteFrame
             }
-            assertEquals((17..22).toSet(), seen)
+            assertEquals((32..43).toSet(), seen)
             game.step(1f / 120f, 0)
             assertEquals(16, game.spriteFrame)
         }
@@ -31,7 +31,7 @@ class NeilAnimationTest {
     @Test fun walkingStopsWhenBlockedOrReleased() {
         val game = NeilGame().apply { start() }
         game.step(1f / 60f, -1)
-        assertTrue(game.spriteFrame in 17..22)
+        assertTrue(game.spriteFrame in 32..43)
         assertEquals(-1, game.facing)
         game.step(1f / 60f, 0)
         assertEquals(16, game.spriteFrame)

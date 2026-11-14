@@ -1,7 +1,7 @@
 {
     "image": "neil_sprite_atlas.png",
     "columns": 4,
-    "rows": 8,
+    "rows": 11,
     "frames": [
         {
             "name": "legacy_idle_0",
@@ -258,6 +258,102 @@
             "width": 313,
             "height": 313,
             "baseline": 297
+        },
+        {
+            "name": "smooth_walk_right_1",
+            "x": 0,
+            "y": 2504,
+            "width": 313,
+            "height": 313,
+            "baseline": 283
+        },
+        {
+            "name": "smooth_walk_right_2",
+            "x": 313,
+            "y": 2504,
+            "width": 313,
+            "height": 313,
+            "baseline": 283
+        },
+        {
+            "name": "smooth_walk_right_3",
+            "x": 626,
+            "y": 2504,
+            "width": 313,
+            "height": 313,
+            "baseline": 283
+        },
+        {
+            "name": "smooth_walk_right_4",
+            "x": 939,
+            "y": 2504,
+            "width": 313,
+            "height": 313,
+            "baseline": 283
+        },
+        {
+            "name": "smooth_walk_right_5",
+            "x": 0,
+            "y": 2817,
+            "width": 313,
+            "height": 313,
+            "baseline": 283
+        },
+        {
+            "name": "smooth_walk_right_6",
+            "x": 313,
+            "y": 2817,
+            "width": 313,
+            "height": 313,
+            "baseline": 283
+        },
+        {
+            "name": "smooth_walk_right_7",
+            "x": 626,
+            "y": 2817,
+            "width": 313,
+            "height": 313,
+            "baseline": 283
+        },
+        {
+            "name": "smooth_walk_right_8",
+            "x": 939,
+            "y": 2817,
+            "width": 313,
+            "height": 313,
+            "baseline": 283
+        },
+        {
+            "name": "smooth_walk_right_9",
+            "x": 0,
+            "y": 3130,
+            "width": 313,
+            "height": 313,
+            "baseline": 283
+        },
+        {
+            "name": "smooth_walk_right_10",
+            "x": 313,
+            "y": 3130,
+            "width": 313,
+            "height": 313,
+            "baseline": 283
+        },
+        {
+            "name": "smooth_walk_right_11",
+            "x": 626,
+            "y": 3130,
+            "width": 313,
+            "height": 313,
+            "baseline": 283
+        },
+        {
+            "name": "smooth_walk_right_12",
+            "x": 939,
+            "y": 3130,
+            "width": 313,
+            "height": 313,
+            "baseline": 283
         }
     ]
 }

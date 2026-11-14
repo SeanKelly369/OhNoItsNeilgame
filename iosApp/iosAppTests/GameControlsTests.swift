@@ -7,26 +7,26 @@ import SwiftUI
 final class GameControlsTests: XCTestCase {
     func testSharedSpritePNGAndManifestAreBundledAndAllFramesDecode() {
         let sprites = NeilSprites()
-        XCTAssertEqual(sprites.frameCount, 32)
-        XCTAssertEqual(sprites.walkFrameCount, 6)
+        XCTAssertEqual(sprites.frameCount, 44)
+        XCTAssertEqual(sprites.walkFrameCount, 12)
         // Verify the full-resolution 313x313 production atlas is loaded.
         let idle = sprites.cgImage(forFrame: 16)
         XCTAssertEqual(idle?.width, 313)
         XCTAssertEqual(idle?.height, 313)
     }
 
-    func testWalkCycleLoopsAcrossAllSixBiomechanicalPhases() {
+    func testWalkCycleLoopsAcrossAllTwelvePhases() {
         let sprites = NeilSprites()
-        XCTAssertEqual(sprites.walkFrameCount, 6)
-        for tick in 0..<18 {
-            let time = Float(Double(tick) * NeilSprites.walkDuration / 6.0 + 0.001)
-            XCTAssertEqual(sprites.walkFrameIndex(frame: 17 + tick % 6, walkTime: time), tick % 6)
+        XCTAssertEqual(sprites.walkFrameCount, 12)
+        for tick in 0..<36 {
+            let time = Float(Double(tick) * NeilSprites.walkDuration / 12.0 + 0.001)
+            XCTAssertEqual(sprites.walkFrameIndex(frame: 32 + tick % 12, walkTime: time), tick % 12)
         }
         for frame in [8, 9, 10, 11, 16, 26, 28, 29, 30, 31] {
             XCTAssertNil(sprites.walkFrameIndex(frame: frame, walkTime: 0.35))
         }
-        for phase in 0..<6 {
-            XCTAssertEqual(sprites.walkFrameIndex(frame: 17 + phase, walkTime: 0), phase)
+        for phase in 0..<12 {
+            XCTAssertEqual(sprites.walkFrameIndex(frame: 32 + phase, walkTime: 0), phase)
         }
     }
 
@@ -34,10 +34,10 @@ final class GameControlsTests: XCTestCase {
         let sprites = NeilSprites()
         for facing: Int32 in [-1, 1] {
             var renderedFrames: [Data] = []
-            for index in 0..<6 {
-                let time = Float(Double(index) * NeilSprites.walkDuration / 6.0 + 0.001)
+            for index in 0..<12 {
+                let time = Float(Double(index) * NeilSprites.walkDuration / 12.0 + 0.001)
                 let renderer = ImageRenderer(content: Canvas { context, _ in
-                    sprites.draw(context, frame: 17 + index, facing: facing, x: 72, y: 140,
+                    sprites.draw(context, frame: 32 + index, facing: facing, x: 72, y: 140,
                                  height: 128, walkTime: time)
                 }.frame(width: 144, height: 160))
                 renderer.scale = 1
@@ -46,7 +46,7 @@ final class GameControlsTests: XCTestCase {
                 let lowerData = try XCTUnwrap(lowerBody.dataProvider?.data) as Data
                 renderedFrames.append(lowerData)
             }
-            XCTAssertEqual(Set(renderedFrames).count, 6, "All 6 walk phases must be distinct for facing \(facing)")
+            XCTAssertEqual(Set(renderedFrames).count, 12, "All 12 walk phases must be distinct for facing \(facing)")
         }
     }
 
