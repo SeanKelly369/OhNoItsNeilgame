@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1D3623842D00000100000001 /* neil-walk-atlas.txt in Resources */ = {isa = PBXBuildFile; fileRef = 1D3623852D00000100000001 /* neil-walk-atlas.txt */; };
+		1D3623822D00000100000001 /* neil-dark-atlas.txt in Resources */ = {isa = PBXBuildFile; fileRef = 1D3623832D00000100000001 /* neil-dark-atlas.txt */; };
+		1D3623802D00000100000001 /* lumberjack-atlas.txt in Resources */ = {isa = PBXBuildFile; fileRef = 1D3623812D00000100000001 /* lumberjack-atlas.txt */; };
 		1D3623262D00000100000001 /* iosAppApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D3623252D00000100000001 /* iosAppApp.swift */; };
 		1D3623282D00000100000001 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D3623272D00000100000001 /* ContentView.swift */; };
 		1D3623302D00000100000001 /* Shared.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1D36232F2D00000100000001 /* Shared.framework */; };
@@ -29,6 +32,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		1D3623852D00000100000001 /* neil-walk-atlas.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "neil-walk-atlas.txt"; sourceTree = "<group>"; };
+		1D3623832D00000100000001 /* neil-dark-atlas.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "neil-dark-atlas.txt"; sourceTree = "<group>"; };
+		1D3623812D00000100000001 /* lumberjack-atlas.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "lumberjack-atlas.txt"; sourceTree = "<group>"; };
 		1D3623222D00000100000001 /* iosApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iosApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1D3623252D00000100000001 /* iosAppApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iosAppApp.swift; sourceTree = "<group>"; };
 		1D3623272D00000100000001 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -103,6 +109,9 @@
 				1D3623272D00000100000001 /* ContentView.swift */,
 				1D3623412D00000100000001 /* GameControlsView.swift */,
 				1D3623612D00000100000001 /* NeilSprites.swift */,
+				1D3623812D00000100000001 /* lumberjack-atlas.txt */,
+				1D3623832D00000100000001 /* neil-dark-atlas.txt */,
+				1D3623852D00000100000001 /* neil-walk-atlas.txt */,
 				1D3623632D00000100000001 /* sprites */,
 				1D3623712D00000100000001 /* Assets.xcassets */,
 				1D3623732D00000100000001 /* LaunchScreen.storyboard */,
@@ -204,6 +213,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				1D3623622D00000100000001 /* sprites in Resources */,
+				1D3623802D00000100000001 /* lumberjack-atlas.txt in Resources */,
+				1D3623822D00000100000001 /* neil-dark-atlas.txt in Resources */,
+				1D3623842D00000100000001 /* neil-walk-atlas.txt in Resources */,
 				1D3623702D00000100000001 /* Assets.xcassets in Resources */,
 				1D3623722D00000100000001 /* LaunchScreen.storyboard in Resources */,
 			);

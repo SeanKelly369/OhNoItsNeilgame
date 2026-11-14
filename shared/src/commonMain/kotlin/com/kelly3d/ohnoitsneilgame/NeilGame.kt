@@ -36,13 +36,15 @@ class NeilGame {
         private set
     var landingTime = 0f
         private set
+    var walkTime = 0f
+        private set
     val spriteFrame: Int get() = when {
         invulnerable > 1.65f -> NeilSpriteFrames.HURT
         !grounded -> if (vy < 0f) NeilSpriteFrames.JUMP else NeilSpriteFrames.FALL
         landingTime > 0f -> NeilSpriteFrames.LAND
         actionTime > 0f -> NeilSpriteFrames.POINT_RIGHT
         moving -> NeilSpriteFrames.WALK_START +
-            (time * 10f).toInt() % NeilSpriteFrames.WALK_COUNT
+            (walkTime * 10f).toInt() % NeilSpriteFrames.WALK_COUNT
         else -> NeilSpriteFrames.IDLE_RIGHT
     }
     var message = "Find the plank in the treetops."
@@ -69,7 +71,7 @@ class NeilGame {
         x = 60f; y = 198f; vy = 0f; grounded = true; facing = 1
         hearts = 3; plank = false; bridge = false; key = false
         time = 0f; invulnerable = 0f; collected.clear()
-        moving = false; actionTime = 0f; landingTime = 0f
+        moving = false; actionTime = 0f; landingTime = 0f; walkTime = 0f
         say("Oh no! Neil's locked out. Find a way home.")
     }
 
@@ -128,6 +130,7 @@ class NeilGame {
             }
         }
         if (!wasGrounded && grounded) landingTime = 0.12f
+        if (moving && grounded) walkTime += delta else walkTime = 0f
         if (!plank && !bridge && abs(x - 429f) < 24 && abs(y - 92f) < 27) {
             plank = true; say("Found a plank! Take it to the river.")
         }
@@ -144,7 +147,7 @@ class NeilGame {
 
     private fun hurt() {
         hearts--
-        moving = false; actionTime = 0f; landingTime = 0f
+        moving = false; actionTime = 0f; landingTime = 0f; walkTime = 0f
         if (hearts <= 0) {
             hearts = 3
             say("Oh no, Neil! A fresh start from the riverbank.")

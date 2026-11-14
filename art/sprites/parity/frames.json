@@ -1,0 +1,344 @@
+{
+  "harry" : [
+    {
+      "anchor" : 244,
+      "baseline" : 422,
+      "file" : "harry_0.png",
+      "height" : 443,
+      "width" : 443
+    },
+    {
+      "anchor" : 228.5,
+      "baseline" : 422,
+      "file" : "harry_1.png",
+      "height" : 443,
+      "width" : 444
+    },
+    {
+      "anchor" : 214,
+      "baseline" : 422,
+      "file" : "harry_2.png",
+      "height" : 443,
+      "width" : 443
+    },
+    {
+      "anchor" : 207.5,
+      "baseline" : 422,
+      "file" : "harry_3.png",
+      "height" : 443,
+      "width" : 444
+    },
+    {
+      "anchor" : 244,
+      "baseline" : 423,
+      "file" : "harry_4.png",
+      "height" : 444,
+      "width" : 443
+    },
+    {
+      "anchor" : 228.5,
+      "baseline" : 423,
+      "file" : "harry_5.png",
+      "height" : 444,
+      "width" : 444
+    },
+    {
+      "anchor" : 214,
+      "baseline" : 423,
+      "file" : "harry_6.png",
+      "height" : 444,
+      "width" : 443
+    },
+    {
+      "anchor" : 207.5,
+      "baseline" : 423,
+      "file" : "harry_7.png",
+      "height" : 444,
+      "width" : 444
+    },
+    {
+      "anchor" : 244,
+      "baseline" : 422,
+      "file" : "harry_8.png",
+      "height" : 443,
+      "width" : 443
+    },
+    {
+      "anchor" : 244,
+      "baseline" : 422,
+      "file" : "harry_9.png",
+      "height" : 443,
+      "width" : 443
+    }
+  ],
+  "neil" : [
+    {
+      "anchor" : 156.5,
+      "baseline" : 299,
+      "file" : "neil_0.png",
+      "height" : 313,
+      "width" : 313
+    },
+    {
+      "anchor" : 156.5,
+      "baseline" : 299,
+      "file" : "neil_1.png",
+      "height" : 313,
+      "width" : 313
+    },
+    {
+      "anchor" : 156.5,
+      "baseline" : 299,
+      "file" : "neil_2.png",
+      "height" : 313,
+      "width" : 313
+    },
+    {
+      "anchor" : 156.5,
+      "baseline" : 299,
+      "file" : "neil_3.png",
+      "height" : 313,
+      "width" : 313
+    },
+    {
+      "anchor" : 156.5,
+      "baseline" : 299,
+      "file" : "neil_4.png",
+      "height" : 313,
+      "width" : 313
+    },
+    {
+      "anchor" : 156.5,
+      "baseline" : 299,
+      "file" : "neil_5.png",
+      "height" : 313,
+      "width" : 313
+    },
+    {
+      "anchor" : 156.5,
+      "baseline" : 299,
+      "file" : "neil_6.png",
+      "height" : 313,
+      "width" : 313
+    },
+    {
+      "anchor" : 156.5,
+      "baseline" : 299,
+      "file" : "neil_7.png",
+      "height" : 313,
+      "width" : 313
+    },
+    {
+      "anchor" : 156.5,
+      "baseline" : 258,
+      "file" : "neil_8.png",
+      "height" : 313,
+      "width" : 313
+    },
+    {
+      "anchor" : 156.5,
+      "baseline" : 295,
+      "file" : "neil_9.png",
+      "height" : 313,
+      "width" : 313
+    },
+    {
+      "anchor" : 156.5,
+      "baseline" : 303,
+      "file" : "neil_10.png",
+      "height" : 313,
+      "width" : 313
+    },
+    {
+      "anchor" : 156.5,
+      "baseline" : 301,
+      "file" : "neil_11.png",
+      "height" : 313,
+      "width" : 313
+    },
+    {
+      "anchor" : 156.5,
+      "baseline" : 300,
+      "file" : "neil_12.png",
+      "height" : 313,
+      "width" : 313
+    },
+    {
+      "anchor" : 156.5,
+      "baseline" : 300,
+      "file" : "neil_13.png",
+      "height" : 313,
+      "width" : 313
+    },
+    {
+      "anchor" : 156.5,
+      "baseline" : 300,
+      "file" : "neil_14.png",
+      "height" : 313,
+      "width" : 313
+    },
+    {
+      "anchor" : 156.5,
+      "baseline" : 300,
+      "file" : "neil_15.png",
+      "height" : 313,
+      "width" : 313
+    },
+    {
+      "anchor" : 156.5,
+      "baseline" : 293,
+      "file" : "neil_16.png",
+      "height" : 313,
+      "width" : 313
+    },
+    {
+      "anchor" : 156.5,
+      "baseline" : 284,
+      "file" : "neil_17.png",
+      "height" : 313,
+      "width" : 313
+    },
+    {
+      "anchor" : 156.5,
+      "baseline" : 284,
+      "file" : "neil_18.png",
+      "height" : 313,
+      "width" : 313
+    },
+    {
+      "anchor" : 156.5,
+      "baseline" : 284,
+      "file" : "neil_19.png",
+      "height" : 313,
+      "width" : 313
+    },
+    {
+      "anchor" : 156.5,
+      "baseline" : 285,
+      "file" : "neil_20.png",
+      "height" : 313,
+      "width" : 313
+    },
+    {
+      "anchor" : 156.5,
+      "baseline" : 285,
+      "file" : "neil_21.png",
+      "height" : 313,
+      "width" : 313
+    },
+    {
+      "anchor" : 156.5,
+      "baseline" : 285,
+      "file" : "neil_22.png",
+      "height" : 313,
+      "width" : 313
+    },
+    {
+      "anchor" : 156.5,
+      "baseline" : 292,
+      "file" : "neil_23.png",
+      "height" : 313,
+      "width" : 313
+    },
+    {
+      "anchor" : 156.5,
+      "baseline" : 291,
+      "file" : "neil_24.png",
+      "height" : 313,
+      "width" : 313
+    },
+    {
+      "anchor" : 156.5,
+      "baseline" : 291,
+      "file" : "neil_25.png",
+      "height" : 313,
+      "width" : 313
+    },
+    {
+      "anchor" : 156.5,
+      "baseline" : 291,
+      "file" : "neil_26.png",
+      "height" : 313,
+      "width" : 313
+    },
+    {
+      "anchor" : 156.5,
+      "baseline" : 291,
+      "file" : "neil_27.png",
+      "height" : 313,
+      "width" : 313
+    },
+    {
+      "anchor" : 156.5,
+      "baseline" : 298,
+      "file" : "neil_28.png",
+      "height" : 313,
+      "width" : 313
+    },
+    {
+      "anchor" : 156.5,
+      "baseline" : 298,
+      "file" : "neil_29.png",
+      "height" : 313,
+      "width" : 313
+    },
+    {
+      "anchor" : 156.5,
+      "baseline" : 298,
+      "file" : "neil_30.png",
+      "height" : 313,
+      "width" : 313
+    },
+    {
+      "anchor" : 156.5,
+      "baseline" : 297,
+      "file" : "neil_31.png",
+      "height" : 313,
+      "width" : 313
+    }
+  ],
+  "walk" : [
+    {
+      "anchor" : 156.5,
+      "baseline" : 284,
+      "file" : "walk_0.png",
+      "height" : 313,
+      "width" : 313
+    },
+    {
+      "anchor" : 156.5,
+      "baseline" : 284,
+      "file" : "walk_1.png",
+      "height" : 313,
+      "width" : 313
+    },
+    {
+      "anchor" : 156.5,
+      "baseline" : 284,
+      "file" : "walk_2.png",
+      "height" : 313,
+      "width" : 313
+    },
+    {
+      "anchor" : 156.5,
+      "baseline" : 285,
+      "file" : "walk_3.png",
+      "height" : 313,
+      "width" : 313
+    },
+    {
+      "anchor" : 156.5,
+      "baseline" : 285,
+      "file" : "walk_4.png",
+      "height" : 313,
+      "width" : 313
+    },
+    {
+      "anchor" : 156.5,
+      "baseline" : 285,
+      "file" : "walk_5.png",
+      "height" : 313,
+      "width" : 313
+    }
+  ]
+}

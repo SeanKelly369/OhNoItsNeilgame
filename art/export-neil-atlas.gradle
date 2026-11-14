@@ -65,7 +65,19 @@ gradle.projectsEvaluated {
                             int walkHeight = (int)(walk.height / 2)
                             int wx = (phase % 3) * walkWidth
                             int wy = (int)(phase / 3) * walkHeight
-                            graphics.drawImage(walk, x, y, x + cellWidth, y + cellHeight,
+                            int minTorsoX = walkWidth, maxTorsoX = -1
+                            for (int py = (int)(walkHeight * 0.2); py <= (int)(walkHeight * 0.6); py++) {
+                                for (int px = 0; px < walkWidth; px++) {
+                                    if ((walk.getRGB(wx + px, wy + py) >>> 24) > 128) {
+                                        if (px < minTorsoX) minTorsoX = px
+                                        if (px > maxTorsoX) maxTorsoX = px
+                                    }
+                                }
+                            }
+                            double torsoCenter = (minTorsoX + maxTorsoX) / 2.0
+                            double cellCenter = walkWidth / 2.0
+                            int shift = (int) Math.round((cellCenter - torsoCenter) * cellWidth / walkWidth)
+                            graphics.drawImage(walk, x + shift, y, x + shift + cellWidth, y + cellHeight,
                                 wx, wy, wx + walkWidth, wy + walkHeight, null)
                         } else {
                             graphics.drawImage(input, dx, dy, dx + width, dy + height,

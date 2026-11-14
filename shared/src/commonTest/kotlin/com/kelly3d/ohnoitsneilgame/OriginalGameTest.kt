@@ -5,6 +5,37 @@ import kotlin.test.*
 class OriginalGameTest {
     private fun world(tile: (Int,Int)->Int = {_,y->if(y==11)50 else 0}, items:List<OriginalGame.Item> = emptyList()) =
         OriginalGame(List(100) { OriginalGame.Room(it,"Room $it",List(240) {i->tile(i%20,i/20)},true) },items)
+    @Test fun saveRestoresInventoryDroppedItemsBonusesAndVisitedRooms() {
+        fun items() = listOf(
+            OriginalGame.Item(0, 97, "Key", 62, 152f, 134f, 0),
+            OriginalGame.Item(1, 98, "Plank", 62, 152f, 134f, 0),
+            OriginalGame.Item(2, 99, "Star", 62, 152f, 134f, 2)
+        )
+        val original = world(items = items())
+        original.objects.forEach(original::collect)
+        original.enter(15, 80f, 120f)
+        original.drop(1)
+        original.hurt()
+        val restored = world(items = items())
+        assertTrue(restored.restoreState(original.saveState()))
+        assertEquals(original.saveState(), restored.saveState())
+        assertEquals(listOf(0), restored.inventory)
+        assertEquals(15, restored.objects[1].room)
+        assertEquals(-1, restored.objects[2].room)
+        assertEquals(1, restored.stars)
+        assertEquals(100, restored.score)
+        assertEquals(2, restored.lives)
+        assertEquals(setOf(62, 15), restored.visited)
+    }
+
+    @Test fun malformedSaveDoesNotPartiallyMutateTheGame() {
+        val game = world()
+        val before = game.saveState()
+        assertFalse(game.restoreState(before.replace("152.0", "NaN")))
+        assertFalse(game.restoreState("NEIL1\n15,1,2,0,0,3\n999\n15\n"))
+        assertEquals(before, game.saveState())
+    }
+
     @Test fun landsOnSolidFloorAndCannotWalkThroughWalls() {
         val g=world({x,y->if(y==11 || x==12)50 else 0})
         repeat(240) {g.step(1f/120,1)}
@@ -78,5 +109,29 @@ class OriginalGameTest {
         assertEquals(NeilSpriteFrames.CLIMB_REST,g.spriteFrame)
         repeat(120) {g.step(1f/120,1)}
         assertFalse(g.climbing)
+    }
+    @Test fun entersAndExitsRoomsThroughDoors() {
+        val rooms = List(100) { OriginalGame.Room(it, if (it == 15) "OUTSIDE THE TOWER" else "Room $it", List(240) { i -> if (i / 20 == 11) 50 else 0 }, it == 62 || it == 15) }
+        val doors = listOf(
+            OriginalGame.Door(62, 224, 128, 256, 175, 15, 224f, 128f, "OUTSIDE THE TOWER"),
+            OriginalGame.Door(15, 208, 112, 255, 175, 62, 232f, 144f, "THE BEGINNING")
+        )
+        val g = OriginalGame(rooms, emptyList(), doors)
+        assertNull(g.nearbyDoor())
+        assertFalse(g.interact())
+
+        g.enter(62, 232f, 144f)
+        val door = g.nearbyDoor()
+        assertNotNull(door)
+        assertEquals(15, door.toRoom)
+        assertTrue(g.interact())
+        assertEquals(15, g.room)
+        assertEquals(224f, g.x, 0.01f)
+        assertTrue(15 in g.visited)
+
+        assertNotNull(g.nearbyDoor())
+        assertTrue(g.enterNearbyDoor())
+        assertEquals(62, g.room)
+        assertEquals(232f, g.x, 0.01f)
     }
 }

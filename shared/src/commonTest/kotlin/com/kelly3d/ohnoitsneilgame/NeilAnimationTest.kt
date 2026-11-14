@@ -21,6 +21,13 @@ class NeilAnimationTest {
     }
 
 
+    @Test fun walkingStartsFromFirstContactFrame() {
+        val game = NeilGame().apply { start(); x = 200f }
+        repeat(17) { game.step(1f / 60f, 0) }
+        game.step(1f / 60f, 1)
+        assertEquals(NeilSpriteFrames.WALK_START, game.spriteFrame)
+    }
+
     @Test fun walkingStopsWhenBlockedOrReleased() {
         val game = NeilGame().apply { start() }
         game.step(1f / 60f, -1)

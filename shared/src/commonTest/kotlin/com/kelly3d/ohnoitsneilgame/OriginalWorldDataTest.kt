@@ -20,5 +20,15 @@ class OriginalWorldDataTest {
         assertEquals(97, items[0].sprite)
         assertEquals(62, items[0].initialRoom)
         assertEquals("Brass Key", items[0].name)
+
+        val doors = OriginalWorldData.defaultDoors(rooms)
+        assertTrue(doors.isEmpty())
+
+        val towerRooms = List(100) { i ->
+            OriginalGame.Room(i, if (i == 15) "OUTSIDE THE TOWER" else "THE BEGINNING", List(240) { 0 }, i == 62 || i == 15)
+        }
+        val towerDoors = OriginalWorldData.defaultDoors(towerRooms)
+        assertTrue(towerDoors.any { it.fromRoom == 62 && it.toRoom == 15 })
+        assertTrue(towerDoors.any { it.fromRoom == 15 && it.toRoom == 62 })
     }
 }
